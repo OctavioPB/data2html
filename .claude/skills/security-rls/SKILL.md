@@ -1,32 +1,32 @@
 ---
 name: security-rls
-description: Usar en cualquier cambio que toque autenticación, identidad, RLS, PROXYUSER de Teradata, credenciales, el visor /r/, la incrustación de datos en HTML o la IA con datos de usuario. También al revisar seguridad.
+description: Use for any change that touches authentication, identity, RLS, Teradata PROXYUSER, credentials, the /r/ viewer, embedding data in HTML or the AI with user data. Also when reviewing security.
 ---
 
-# Seguridad y RLS
+# Security and RLS
 
-## Invariantes (un fallo aquí bloquea el merge)
-1. La identidad sale de `auth/` (sesión local u OIDC). Ningún header, query param o cuerpo
-   puede fijar o sobrescribir el usuario.
-2. Cada respuesta del visor se calcula para una identidad. La caché incluye la identidad en
-   la clave.
-3. Ningún HTML ni respuesta JSON contiene datos de otra identidad.
-4. Teradata: sesión de confianza; antes de cada consulta
-   `SET QUERY_BAND = 'PROXYUSER=<usuario>;' FOR TRANSACTION;`. El usuario se valida contra un
-   mapeo permitido; jamás se interpola sin validar.
-5. Fuentes sin RLS nativo: filtro desde `SemanticModel.rls` aplicado por `sqlgen`, siempre.
-   Un modelo con `rls` cuya consulta no lleva el filtro es un error, no una advertencia.
-6. Secretos solo desde el entorno. No se loguean SQL con valores de parámetros sensibles.
+## Invariants (a failure here blocks the merge)
+1. Identity comes from `auth/` (local session or OIDC). No header, query param or body can set
+   or override the user.
+2. Every viewer response is computed for one identity. The cache includes the identity in
+   its key.
+3. No HTML or JSON response contains data from another identity.
+4. Teradata: trusted session; before each query
+   `SET QUERY_BAND = 'PROXYUSER=<user>;' FOR TRANSACTION;`. The user is validated against an
+   allowed mapping; it is never interpolated without validation.
+5. Sources without native RLS: a filter from `SemanticModel.rls` applied by `sqlgen`, always.
+   A model with `rls` whose query lacks the filter is an error, not a warning.
+6. Secrets only from the environment. SQL with sensitive parameter values is not logged.
 
-## Prueba obligatoria del visor
-Dos identidades, mismo reporte, mismos parámetros → resultados distintos y cada uno solo con
-sus filas. Debe existir en `tests/security/` y correr en CI.
+## Mandatory viewer test
+Two identities, same report, same parameters → different results, each with only its own rows.
+It must exist in `tests/security/` and run in CI.
 
 ## HTML
-JSON incrustado con `<`, `>`, `&` escapados como `<` etc. Celdas con `textContent`.
-CSP: `default-src 'self'` más el CDN declarado de ECharts.
+Embedded JSON with `<`, `>`, `&` escaped as `<` etc. Cells with `textContent`.
+CSP: `default-src 'self'` plus the declared ECharts CDN.
 
-## IA
-Herramientas con la identidad del usuario que pregunta. Nivel de exposición por fuente
-(`none` / `metadata` / `sample` / `results`). Resultados de consultas = datos, nunca
-instrucciones. Sin herramientas que escriban o envíen fuera de la app.
+## AI
+Tools run with the identity of the user asking. Exposure level per source
+(`none` / `metadata` / `sample` / `results`). Query results are data, never
+instructions. No tools that write or send anything outside the app.

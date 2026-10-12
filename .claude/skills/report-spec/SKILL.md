@@ -1,27 +1,27 @@
 ---
 name: report-spec
-description: Usar al crear, modificar o validar reportes, visuales o modelos semánticos de data2html, o al tocar backend/src/data2html/spec/. Cubre el contrato, la compatibilidad de tipos de gráfico y cómo evolucionar el esquema sin romper productores.
+description: Use when creating, modifying or validating data2html reports, visuals or semantic models, or when touching backend/src/data2html/spec/. Covers the contract, chart-type compatibility and how to evolve the schema without breaking producers.
 ---
 
-# El contrato report-spec
+# The report-spec contract
 
-Código: `backend/src/data2html/spec/` (`models.py`, `compat.py`, `export.py`).
-Ejemplos canónicos: `examples/semantic/*.yaml`, `examples/reports/*.yaml`.
+Code: `backend/src/data2html/spec/` (`models.py`, `compat.py`, `export.py`).
+Canonical examples: `examples/semantic/*.yaml`, `examples/reports/*.yaml`.
 
-## Reglas
-1. Un visual referencia medidas y dimensiones **por nombre**. Si te ves escribiendo SQL dentro
-   de un visual, la medida falta en el modelo: agrégala ahí, con `owner` y `description`.
-2. `validate_report(report, model)` devuelve errores en español, uno por problema. Úsalo antes
-   de guardar cualquier reporte; no publiques con errores.
-3. El tipo de gráfico permitido sale solo de `compat.allowed_marks`. No dupliques esas reglas en
-   el frontend ni en el renderer: consúmelas (`GET /api/compat` o el JSON incrustado).
-4. `table` siempre es válido. `kpi` solo sin dimensión. `line` solo con dimensión temporal u
-   ordinal. `pie` solo con dimensión nominal y sin color.
+## Rules
+1. A visual references measures and dimensions **by name**. If you find yourself writing SQL inside
+   a visual, the measure is missing from the model: add it there, with `owner` and `description`.
+2. `validate_report(report, model)` returns errors in the request language (English by default,
+   via `tr()`), one per problem. Use it before saving any report; do not publish with errors.
+3. The allowed chart type comes only from `compat.allowed_marks`. Do not duplicate those rules in
+   the frontend or the renderer: consume them (`GET /api/compat` or the embedded JSON).
+4. `table` is always valid. `kpi` only without a dimension. `line` only with a temporal or ordinal
+   dimension. `pie` only with a nominal dimension and no color.
 
-## Cambiar el contrato (checklist)
-- [ ] Diseño mostrado al usuario y aprobado (CLAUDE.md: "Cómo trabajar conmigo").
-- [ ] Campo nuevo con default si es opcional; nunca renombres un campo sin migración de YAML.
-- [ ] Ejemplos de `examples/` actualizados y validando.
-- [ ] Test que cubra el caso nuevo y uno que cubra su rechazo.
-- [ ] `python -m data2html.spec.export` y commit del schema regenerado.
-- [ ] Si afecta a la IA: el schema es su definición de herramienta; revisa la descripción de campos.
+## Changing the contract (checklist)
+- [ ] Design shown to the user and approved (CLAUDE.md: "Working with me").
+- [ ] New field with a default if optional; never rename a field without a YAML migration.
+- [ ] `examples/` updated and validating.
+- [ ] A test covering the new case and one covering its rejection.
+- [ ] `python -m data2html.spec.export` and commit the regenerated schema.
+- [ ] If it affects the AI: the schema is its tool definition; review the field descriptions.

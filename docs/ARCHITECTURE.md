@@ -1,60 +1,68 @@
-# Arquitectura
+# Architecture
 
-## Componentes
+## Components
 
 ```
-studio/ (React, autor)            visor /r/<id> (HTML, lectores)
-        │  REST + Arrow IPC              │  JSON por visual
+studio/ (React, author)           viewer /r/<id> (HTML, readers)
+        │  REST + Arrow IPC              │  JSON per visual
         ▼                                ▼
 backend/src/data2html/
-  api/        FastAPI: rutas del studio y del visor, auth
-  spec/       CONTRATO: Report, Visual, SemanticModel, compat, JSON Schema
-  semantic/   carga y validación cruzada de modelos semánticos
-  sqlgen/     Visual + SemanticModel → SQL DuckDB → SQLGlot(dialecto)
+  api/        FastAPI: studio and viewer routes, auth
+  spec/       CONTRACT: Report, Visual, SemanticModel, compat, JSON Schema
+  semantic/   loading and cross-validation of semantic models
+  sqlgen/     Visual + SemanticModel → DuckDB SQL → SQLGlot(dialect)
   sources/    DataSource: csv, postgres, mysql, teradata, dynamodb_export
-  profiling/  EDA (SUMMARIZE, histogramas, correlaciones, muestreo)
-  render/     Jinja2 + ECharts → HTML del reporte (selector de mark incluido)
-  auth/       proveedores: local, oidc → Identity
-  ai/         opcional: LLMProvider, herramientas, políticas de exposición
-  importers/pbix/  extractor heredado de pbix2html
+  profiling/  EDA (statistics, histograms, correlations, sampling)
+  render/     Jinja2 + ECharts → report HTML (mark selector included)
+  auth/       providers: local, oidc → Identity
+  ai/         optional: LLMProvider, tools, exposure policies
+  i18n.py, locales/  server messages in English / Spanish (per request)
+  importers/pbix/    extractor inherited from pbix2html
 ```
 
-## Flujo de una consulta de visual
+## How a visual query flows
 
-1. El visor pide `GET /api/r/{report}/visuals/{visual}?params`.
-2. `auth` resuelve la `Identity` del lector (nunca desde parámetros).
-3. Se carga el `Visual` del `report-spec` y el `SemanticModel` que referencia.
-4. `sqlgen` construye SQL en dialecto DuckDB con parámetros; SQLGlot lo transpila al de la fuente.
-5. La fuente ejecuta con la identidad (Teradata: `PROXYUSER`; otras: filtro RLS del modelo).
-6. Resultado como Arrow → JSON compacto (columnas + filas) al navegador.
-7. Caché por `hash(spec, identidad, parámetros)` con TTL por fuente.
+1. The viewer requests `GET /api/r/{report}/visuals/{visual}?params`.
+2. `auth` resolves the reader's `Identity` (never from parameters).
+3. The `Visual` is loaded from the `report-spec`, together with the `SemanticModel` it references.
+4. `sqlgen` builds DuckDB-dialect SQL with parameters; SQLGlot transpiles it to the source's dialect.
+5. The source runs it with the identity (Teradata: `PROXYUSER`; others: the model's RLS filter).
+6. Result as Arrow → compact JSON (columns + rows) to the browser.
+7. Cache by `hash(spec, identity, parameters)` with a per-source TTL.
 
-## Modos de ejecución
+## Execution modes
 
-| Modo | Dónde corre el SQL | Fuentes |
+| Mode | Where the SQL runs | Sources |
 |---|---|---|
-| Import | DuckDB local sobre Parquet | CSV, DynamoDB (export), Postgres/MySQL opcional |
-| DirectQuery | En la fuente | Teradata, Postgres, MySQL |
+| Import | Local DuckDB over Parquet | CSV, DynamoDB (export), optionally Postgres/MySQL |
+| DirectQuery | In the source | Teradata, Postgres, MySQL |
 
-Postgres/MySQL vía extensiones de DuckDB: los filtros se empujan, las agregaciones no siempre.
-Para tablas grandes, `sqlgen` emite la consulta completa en el dialecto de la fuente
-(`postgres_query`, `mysql_query` o conexión nativa).
+Postgres/MySQL through DuckDB extensions: filters are pushed down, aggregations not always.
+For large tables, `sqlgen` emits the whole query in the source's dialect
+(`postgres_query`, `mysql_query` or a native connection) — planned for Phase 7 (ADR 0008).
 
-## Identidad y roles
+## Identity and roles
 
-- **Autor:** un único usuario con acceso al studio (`role=author`).
-- **Lector:** cualquier identidad autenticada con acceso al reporte publicado.
-- `auth/` expone `Identity(user_id, email, groups, provider)`. Proveedores: `local` (desarrollo y
-  uso personal) y `oidc` (SSO corporativo). Ambos pueden estar activos a la vez.
-- Para Teradata, solo identidades `oidc` mapean a `PROXYUSER`; una identidad local no obtiene
-  datos de Teradata en el visor salvo mapeo explícito configurado por el autor.
+- **Author:** a single user with access to the studio (`role=author`).
+- **Reader:** any authenticated identity with access to the published report.
+- `auth/` exposes `Identity(user_id, email, groups, provider)`. Providers: `local` (development and
+  personal use) and `oidc` (corporate SSO). Both can be active at once.
+- For Teradata, only `oidc` identities map to `PROXYUSER`; a local identity gets no Teradata data in
+  the viewer unless the author configures an explicit mapping.
 
-## Red y hosting (decisión abierta)
+## Language
 
-El visor en vivo consulta Teradata en cada interacción: necesita conectividad directa y de baja
-latencia. Si Teradata está on-prem, el visor probablemente viva en la red corporativa. Todo se
-empaqueta en Docker y se configura por variables de entorno para no atarse a un proveedor.
+User-facing server messages are English msgids wrapped in `tr()`; the request language comes from
+`Accept-Language` (the studio sends the user's choice) and `locales/es.py` holds the Spanish catalog.
+The studio has its own typed dictionaries (`studio/src/i18n`). Data, model names and report content are
+not translated.
 
-## Por qué así
+## Network and hosting (open decision)
 
-Ver `docs/decisions/`.
+The live viewer queries Teradata on every interaction: it needs direct, low-latency connectivity. If
+Teradata is on-prem, the viewer will probably live on the corporate network. Everything is packaged in
+Docker and configured through environment variables so we are not tied to a provider.
+
+## Why it is this way
+
+See `docs/decisions/`.

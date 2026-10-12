@@ -1,72 +1,77 @@
-# data2html — De los datos al reporte HTML, sin Power BI
+# data2html — From data to HTML reports, without Power BI
 
-App web propia para **EDA, consulta SQL y visualización** (Excel + Power BI + SQL en una sola
-herramienta) que publica **reportes HTML servidos en vivo** con seguridad por fila.
+A home-grown web app for **EDA, SQL querying and visualization** (Excel + Power BI + SQL in a single
+tool) that publishes **live-served HTML reports** with row-level security.
 
-- **Backend:** FastAPI sobre Uvicorn, Python 3.12, DuckDB, SQLGlot, Pydantic v2.
+- **Backend:** FastAPI on Uvicorn, Python 3.12, DuckDB, SQLGlot, Pydantic v2.
 - **Frontend (studio):** React + Vite + TypeScript.
-- **Fuentes:** CSV (subida), Postgres, MySQL, Teradata, DynamoDB (vía export a S3).
-- **Origen:** sucede a `pbix2html`. Su motor (query/render/serve) se trae aquí por fases
-  (ver `backend/src/data2html/importers/pbix/README.md`); su extractor queda como importador.
-  pbix2html sigue operando hasta el corte: no lo modifiques desde este repo.
+- **Sources:** CSV (upload), Postgres, MySQL, Teradata, DynamoDB (via export to S3).
+- **Origin:** succeeds `pbix2html`. Its engine (query/render/serve) is brought over here in phases
+  (see `backend/src/data2html/importers/pbix/README.md`); its extractor stays as an importer.
+  pbix2html keeps running until the cutover: do not modify it from this repo.
 
-Lee `PLAN.md` para saber en qué fase estamos. Lee `docs/ARCHITECTURE.md` antes de tocar más
-de un módulo. Las decisiones cerradas están en `docs/decisions/` — no las reabras sin un ADR nuevo.
+Read `PLAN.md` to know which phase we are in. Read `docs/ARCHITECTURE.md` before touching more
+than one module. Closed decisions live in `docs/decisions/` — do not reopen them without a new ADR.
 
-## Modelo mental (no lo rompas)
+## Mental model (do not break it)
 
 ```
-Studio (autor único) ──► report-spec (YAML/JSON validado) ──► engine ──► HTML en vivo (lectores)
-Importador pbix ───────┘         ▲
-                         modelo semántico (medidas definidas UNA vez)
+Studio (single author) ──► report-spec (validated YAML/JSON) ──► engine ──► live HTML (readers)
+pbix importer ─────────┘         ▲
+                         semantic model (measures defined ONCE)
 ```
 
-1. **El `report-spec` es el contrato.** Lo producen el studio, el importador pbix y (más tarde) la IA.
-   Lo consume el engine. Vive en `backend/src/data2html/spec/`. Si cambias el contrato, cambia
-   también el JSON Schema exportado, los ejemplos en `examples/` y los tests.
-2. **Las medidas se definen en el modelo semántico, nunca en el visual.** Un visual referencia
-   `measure: venta_neta` por nombre. Prohibido SQL de medida embebido en un visual.
-3. **El navegador nunca recibe datos crudos.** Solo resultados agregados o páginas (`LIMIT`).
-4. **SQL se genera en dialecto DuckDB y se transpila con SQLGlot** al dialecto de la fuente.
-   Nunca concatenes strings de SQL con valores de usuario: usa parámetros.
-5. **Un autor, muchos lectores.** El studio es monousuario. El visor (`/r/...`) es multiusuario con RLS.
+1. **The `report-spec` is the contract.** The studio, the pbix importer and (later) the AI produce it.
+   The engine consumes it. It lives in `backend/src/data2html/spec/`. If you change the contract, also
+   change the exported JSON Schema, the examples in `examples/` and the tests.
+2. **Measures are defined in the semantic model, never in the visual.** A visual references
+   `measure: venta_neta` by name. Measure SQL embedded in a visual is forbidden.
+3. **The browser never receives raw data.** Only aggregated results or pages (`LIMIT`).
+4. **SQL is generated in the DuckDB dialect and transpiled with SQLGlot** to the source's dialect.
+   Never concatenate SQL strings with user values: use parameters.
+5. **One author, many readers.** The studio is single-user. The viewer (`/r/...`) is multi-user with RLS.
 
-## Reglas duras (seguridad)
+## Hard rules (security)
 
-- **Nunca** un HTML con datos de más de un rol/usuario. Cada respuesta del visor se calcula con
-  la identidad del lector.
-- RLS de Teradata: sesión de confianza con `PROXYUSER` vía `SET QUERY_BAND`. La identidad viene
-  del proveedor de auth (OIDC o login local), **nunca** de un parámetro de la petición.
-- Conexiones a fuentes: usuarios de base de datos con solo `SELECT`. Además, todo SQL libre se
-  parsea con SQLGlot y se rechaza si no es un único `SELECT`.
-- Credenciales: solo en variables de entorno / vault. Jamás en YAML del repo, logs ni respuestas.
-- DuckDB del servidor: `enable_external_access=false` salvo en la ingesta, límites de memoria y
-  threads, timeout por consulta.
-- Datos en HTML: escapar `<`, `>`, `&` en el JSON incrustado; celdas con `textContent`.
-- Si la IA está activa, sus herramientas corren con la identidad y el RLS del usuario que pregunta.
+- **Never** an HTML with data from more than one role/user. Every viewer response is computed with
+  the reader's identity.
+- Teradata RLS: trusted session with `PROXYUSER` via `SET QUERY_BAND`. The identity comes from the
+  auth provider (OIDC or local login), **never** from a request parameter.
+- Source connections: database users with `SELECT` only. Also, all free SQL is parsed with SQLGlot
+  and rejected unless it is a single `SELECT`.
+- Credentials: only in environment variables / vault. Never in repo YAML, logs or responses.
+- Server DuckDB: `enable_external_access=false` except during ingestion, memory and thread limits,
+  per-query timeout.
+- Data in HTML: escape `<`, `>`, `&` in embedded JSON; cells with `textContent`.
+- If the AI is enabled, its tools run with the identity and RLS of the user asking.
 
-## Convenciones
+## Conventions
 
-- Python: `ruff` + `mypy --strict` en `spec/`, `semantic/`, `sqlgen/`. Tests con `pytest`.
-- Modelos Pydantic con `extra="forbid"`: un campo desconocido es un error, no se ignora.
-- Toda fuente implementa `DataSource` (`backend/src/data2html/sources/base.py`) y devuelve Arrow.
-- Frontend: tipos generados desde OpenAPI (`npm run gen:api`); no escribas tipos de la API a mano.
-- Licencias: solo permisivas (MIT/Apache/BSD). Prohibido GPL o comerciales sin un ADR.
-- Nombres de modelos de IA y credenciales: siempre en configuración, nunca en código.
+- Python: `ruff` + `mypy --strict` in `spec/`, `semantic/`, `sqlgen/`. Tests with `pytest`.
+- Pydantic models with `extra="forbid"`: an unknown field is an error, not ignored.
+- Every source implements `DataSource` (`backend/src/data2html/sources/base.py`) and returns Arrow.
+- Frontend: types generated from OpenAPI (`npm run gen:api`); do not hand-write API types.
+- Licenses: permissive only (MIT/Apache/BSD). GPL or commercial ones are forbidden without an ADR.
+- AI model names and credentials: always in configuration, never in code.
+- Language: code, comments and docs in English. User-facing text is translated:
+  - Backend: English msgid in `tr("...", **params)` (`data2html/i18n.py`) plus its entry in
+    `locales/es.py`; `tests/test_i18n.py` fails if one is missing or unused.
+  - Studio: key in `studio/src/i18n/en.ts` and `es.ts`, used through `useT()` / `t()`.
+  - Data, model/measure names and report content are never translated.
 
-## Cómo trabajar conmigo
+## Working with me
 
-- Una fase a la vez; marca casillas en `PLAN.md` al terminar y agrega la fecha.
-- Antes de implementar algo que toque el contrato, la seguridad o una fuente nueva, muéstrame
-  el diseño (archivos a tocar + interfaz) y espera mi visto bueno.
-- Antes de ejecutar cualquier cosa contra Teradata real, pídeme confirmación.
-- Usa las skills de `.claude/skills/` para su dominio. Comandos: `/fase`, `/nueva-fuente`,
-  `/nuevo-visual`, `/revisar-seguridad`.
+- One phase at a time; check boxes in `PLAN.md` when done and add the date.
+- Before implementing anything that touches the contract, security or a new source, show me
+  the design (files to touch + interface) and wait for my approval.
+- Before running anything against real Teradata, ask me for confirmation.
+- Use the skills in `.claude/skills/` for their domain. Commands: `/phase`, `/new-source`,
+  `/new-visual`, `/review-security`.
 
-## Comandos
+## Commands
 
 ```bash
-docker compose up -d postgres          # fuente de desarrollo
+docker compose up -d postgres          # development source
 cd backend && pip install -e ".[dev]" && pytest -q
 uvicorn data2html.api.main:app --reload
 cd studio && npm install && npm run dev

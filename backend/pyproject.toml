@@ -1,7 +1,7 @@
 [project]
 name = "data2html"
 version = "0.1.0"
-description = "EDA, SQL y visualización con reportes HTML en vivo"
+description = "EDA, SQL querying and visualization with live HTML reports"
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115",
@@ -29,7 +29,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["postgres: integración con el Postgres de desarrollo (se omite si no hay servidor)"]
+markers = ["postgres: integration with the development Postgres (skipped if there is no server)"]
 
 [tool.ruff]
 line-length = 110

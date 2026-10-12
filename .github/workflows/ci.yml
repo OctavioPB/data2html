@@ -15,7 +15,7 @@ jobs:
       run:
         working-directory: backend
     services:
-      postgres:  # mismo que docker-compose.yml; credenciales solo de desarrollo
+      postgres:  # same as docker-compose.yml; development-only credentials
         image: postgres:16
         env:
           POSTGRES_DB: d2h
@@ -34,14 +34,14 @@ jobs:
           cache: pip
           cache-dependency-path: backend/pyproject.toml
       - run: pip install -e ".[dev]"
-      - name: Semilla de Postgres
+      - name: Seed Postgres
         run: psql -h localhost -U d2h -d d2h -v ON_ERROR_STOP=1 -f ../dev/seed.sql
         env:
           PGPASSWORD: d2h
       - run: python -m data2html.devtools install-extensions
       - run: ruff check .
       - run: mypy src
-      # incluye los tests de deriva de spec.schema.json y openapi.json, y los de Postgres
+      # includes the spec.schema.json and openapi.json drift tests, and the Postgres ones
       - run: pytest -q -rs
 
   studio:
@@ -57,7 +57,7 @@ jobs:
           cache: npm
           cache-dependency-path: studio/package-lock.json
       - run: npm ci
-      - name: Tipos TS en sincronía con openapi.json
+      - name: TS types in sync with openapi.json
         run: npm run gen:api && git diff --exit-code -- src/generated/api.ts
       - run: npm run lint
       - run: npm run build

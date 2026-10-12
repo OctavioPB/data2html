@@ -1,35 +1,35 @@
 ---
 name: data-sources
-description: Usar al implementar, configurar o depurar una fuente de datos (CSV, Postgres, MySQL, Teradata, DynamoDB) en backend/src/data2html/sources/, o al registrar conexiones y credenciales.
+description: Use when implementing, configuring or debugging a data source (CSV, Postgres, MySQL, Teradata, DynamoDB) in backend/src/data2html/sources/, or when registering connections and credentials.
 ---
 
-# Fuentes de datos
+# Data sources
 
-Interfaz: `sources/base.py::DataSource` (`id`, `dialect`, `catalog()`, `execute()`, `cancel()`).
-Todas devuelven `pyarrow.Table`.
+Interface: `sources/base.py::DataSource` (`id`, `dialect`, `catalog()`, `execute()`, `cancel()`).
+All of them return `pyarrow.Table`.
 
-| Fuente | Implementación | Modo | Notas |
+| Source | Implementation | Mode | Notes |
 |---|---|---|---|
-| CSV | DuckDB `read_csv` → Parquet | Import | revisión de tipos por el usuario antes de confirmar |
-| Postgres | `ATTACH ... (TYPE postgres, READ_ONLY)` | DirectQuery/Import | agregaciones grandes: `postgres_query()` |
-| MySQL | `ATTACH ... (TYPE mysql, READ_ONLY)` | DirectQuery/Import | idem con `mysql_query()` |
-| Teradata | `teradatasql` | DirectQuery | `PROXYUSER` por query band; ver skill security-rls |
-| DynamoDB | export nativo a S3 → `httpfs` → Parquet aplanado | Import programado | **nunca** `Scan` ni PartiQL sin clave en vivo |
+| CSV | DuckDB `read_csv` → Parquet | Import | the user reviews the types before confirming |
+| Postgres | `ATTACH ... (TYPE postgres, READ_ONLY)` | DirectQuery/Import | large aggregations: `postgres_query()` |
+| MySQL | `ATTACH ... (TYPE mysql, READ_ONLY)` | DirectQuery/Import | same with `mysql_query()` |
+| Teradata | `teradatasql` | DirectQuery | `PROXYUSER` via query band; see the security-rls skill |
+| DynamoDB | native export to S3 → `httpfs` → flattened Parquet | Scheduled import | **never** a live `Scan` or keyless PartiQL |
 
-## CSV: trampas de inferencia
-Fechas ambiguas (`03/04/2026`), coma decimal, códigos con ceros a la izquierda convertidos a
-entero, encabezados repetidos. Muestra los tipos inferidos y deja corregirlos; guarda la
-decisión junto al Parquet (`<tabla>.schema.json`).
+## CSV: inference traps
+Ambiguous dates (`03/04/2026`), decimal comma, codes with leading zeros turned into integers,
+repeated headers. Show the inferred types and let the user correct them; store the decision next
+to the Parquet (`<table>.schema.json`).
 
-## Conexiones
-- Registro en `config/sources.yaml`: id, tipo, host, base y **nombre** de la variable de entorno
-  con el secreto. Nunca el secreto.
-- Usuario de base de datos con permisos de solo `SELECT`.
-- Pool por fuente con tamaño máximo y semáforo de consultas concurrentes.
-- Perfilado sobre fuentes remotas: siempre con muestra (`TABLESAMPLE`, `SAMPLE`) e indícalo.
+## Connections
+- Registered in `config/sources.yaml`: id, type, host, database and the **name** of the environment
+  variable holding the secret. Never the secret itself.
+- Database user with `SELECT`-only permissions.
+- A pool per source with a maximum size and a semaphore for concurrent queries.
+- Profiling remote sources: always on a sample (`TABLESAMPLE`, `SAMPLE`), and say so.
 
-## Nueva fuente (checklist)
-- [ ] Clase que cumple `DataSource` (`isinstance(x, DataSource)` en test).
-- [ ] Test de catálogo y de `execute` contra un contenedor o un fake.
-- [ ] Dialecto agregado a los snapshots de `sqlgen`.
-- [ ] Revisión con `/revisar-seguridad`.
+## New source (checklist)
+- [ ] Class satisfying `DataSource` (`isinstance(x, DataSource)` in a test).
+- [ ] Catalog and `execute` tests against a container or a fake.
+- [ ] Dialect added to the `sqlgen` snapshots.
+- [ ] Review with `/review-security`.

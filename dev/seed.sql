@@ -1,4 +1,4 @@
--- Datos de desarrollo para examples/semantic/ventas.yaml
+-- Development data for examples/semantic/ventas.yaml
 CREATE TABLE fact_ventas (
   pedido_id   int,
   fecha_venta date,

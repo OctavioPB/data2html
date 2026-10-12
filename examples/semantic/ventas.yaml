@@ -1,6 +1,6 @@
-# Modelo semántico de ejemplo. Las medidas se definen AQUÍ una sola vez.
+# Example semantic model. Measures are defined HERE, once.
 name: ventas
-source: postgres_dev          # id de conexión registrada; credenciales en .env
+source: postgres_dev          # registered connection id; credentials in .env
 table: public.fact_ventas
 dimensions:
   region:   { column: region_desc, type: nominal,  description: "Región comercial" }

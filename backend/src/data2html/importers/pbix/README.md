@@ -1,21 +1,21 @@
-# Importador pbix (Fase 7)
+# pbix importer (Phase 7)
 
-Trae aquí desde el repo `pbix2html`:
+Bring over from the `pbix2html` repo:
 
-| pbix2html | destino en data2html |
+| pbix2html | destination in data2html |
 |---|---|
-| `extract.py`, `semantic.py` | `importers/pbix/` (salida: `SemanticModel` + `Report`) |
-| `query.py` (Teradata, PROXYUSER) | `sources/teradata.py` cumpliendo `DataSource` |
-| `render.py` + plantilla | `render/` (grilla de 12 columnas en vez de layout absoluto) |
-| `serve.py` | `api/` rutas del visor `/r/<id>` |
-| `validate.py` | `tests/` de paridad para reportes migrados |
-| `metrics/<R>.yaml` | entrada del importador; sus SQL validados siembran medidas |
+| `extract.py`, `semantic.py` | `importers/pbix/` (output: `SemanticModel` + `Report`) |
+| `query.py` (Teradata, PROXYUSER) | `sources/teradata.py` satisfying `DataSource` |
+| `render.py` + template | `render/` (12-column grid instead of absolute layout) |
+| `serve.py` | `api/` routes of the `/r/<id>` viewer |
+| `validate.py` | parity `tests/` for migrated reports |
+| `metrics/<R>.yaml` | importer input; its validated SQL seeds measures |
 
-## Consolidación de medidas
-Cada `sql` por visual se descompone en (dimensión, medida). Medidas con la misma expresión
-normalizada (AST de SQLGlot) se fusionan; las casi iguales se listan en
-`out/<reporte>.medidas_conflicto.md` para que el dueño decida. No las fusiones en silencio.
+## Measure consolidation
+Each per-visual `sql` is decomposed into (dimension, measure). Measures with the same normalized
+expression (SQLGlot AST) are merged; near-identical ones are listed in
+`out/<report>.measure_conflicts.md` for the owner to decide. Do not merge them silently.
 
-## Conversión de layout
-Posiciones absolutas del .pbix → `Layout(x, y, w, h)` en grilla de 12 columnas, redondeando y
-preservando el orden de lectura (arriba-abajo, izquierda-derecha).
+## Layout conversion
+Absolute .pbix positions → `Layout(x, y, w, h)` on a 12-column grid, rounding and preserving
+reading order (top-to-bottom, left-to-right).

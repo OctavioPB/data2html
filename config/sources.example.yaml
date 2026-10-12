@@ -1,5 +1,5 @@
-# Registro de conexiones. Solo NOMBRES de variables de entorno, nunca secretos.
-# Copia a config/sources.yaml (ignorado por git) o apunta D2H_SOURCES_FILE a otro archivo.
+# Connection registry. Only NAMES of environment variables, never secrets.
+# Copy to config/sources.yaml (ignored by git) or point D2H_SOURCES_FILE to another file.
 sources:
   postgres_dev:
     type: postgres
@@ -7,11 +7,11 @@ sources:
     port: 5432
     database: d2h
     user: d2h_reader
-    password_env: PG_DEV_PASSWORD   # el valor vive en el entorno (.env), nunca aquí
+    password_env: PG_DEV_PASSWORD   # the value lives in the environment (.env), never here
     mode: directquery
-    schemas: [public]               # esquemas visibles en el catálogo
+    schemas: [public]               # schemas visible in the catalog
     connect_timeout_s: 5
-  # Teradata llega en la Fase 7; hoy un tipo distinto de postgres es un error de validación.
+  # Teradata arrives in Phase 7; today any type other than postgres is a validation error.
   # teradata_prod:
   #   type: teradata
   #   host_env: TD_HOST
