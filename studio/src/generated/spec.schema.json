@@ -35,6 +35,7 @@
     },
     "Filter": {
       "additionalProperties": false,
+      "description": "Filtro sobre una dimensión. El valor viene de un parámetro del reporte (`param`) o es fijo\n(`value`); exactamente uno de los dos.",
       "properties": {
         "dimension": {
           "pattern": "^[a-z][a-z0-9_]{0,62}$",
@@ -45,16 +46,64 @@
           "$ref": "#/$defs/FilterOp"
         },
         "param": {
-          "description": "Nombre del parámetro del reporte que aporta el valor",
-          "pattern": "^[a-z][a-z0-9_]{0,62}$",
-          "title": "Param",
-          "type": "string"
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Parámetro del reporte que aporta el valor",
+          "title": "Param"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Valor fijo; lista para 'in' y [desde, hasta] para 'between'",
+          "title": "Value"
         }
       },
       "required": [
         "dimension",
-        "op",
-        "param"
+        "op"
       ],
       "title": "Filter",
       "type": "object"
@@ -62,9 +111,11 @@
     "FilterOp": {
       "enum": [
         "eq",
+        "neq",
         "in",
         "gte",
-        "lte"
+        "lte",
+        "between"
       ],
       "title": "FilterOp",
       "type": "string"
@@ -118,7 +169,7 @@
       "additionalProperties": false,
       "properties": {
         "sql": {
-          "description": "Expresión agregada en dialecto DuckDB, p. ej. SUM(MONTO)",
+          "description": "Una expresión agregada en dialecto DuckDB sobre columnas de la tabla del modelo, p. ej. SUM(monto_bruto - descuento). Sin subconsultas, ventanas ni funciones desconocidas; toda columna dentro de un agregado.",
           "title": "Sql",
           "type": "string"
         },
@@ -288,6 +339,17 @@
       "title": "SemanticModel",
       "type": "object"
     },
+    "TimeGrain": {
+      "enum": [
+        "day",
+        "week",
+        "month",
+        "quarter",
+        "year"
+      ],
+      "title": "TimeGrain",
+      "type": "string"
+    },
     "Visual": {
       "additionalProperties": false,
       "properties": {
@@ -320,6 +382,18 @@
           ],
           "default": null,
           "title": "Dimension"
+        },
+        "time_grain": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimeGrain"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Agrupa una dimensión temporal por periodo (date_trunc)"
         },
         "color": {
           "anyOf": [

@@ -133,3 +133,55 @@ def test_api_computed_column_on_postgres(client):
 def test_api_unknown_table_and_schema(client):
     assert client.post("/api/explore/pg_dev/public.no_existe", json={}).status_code == 404
     assert client.post("/api/explore/pg_dev/otro.fact_ventas", json={}).status_code == 404
+
+
+def test_api_profile_postgres(client):
+    from data2html.api.profile import cache
+
+    cache.clear()
+    r = client.get("/api/profile/pg_dev/public.fact_ventas")
+    assert r.status_code == 200, r.text
+    p = r.json()
+    # 50k filas < muestra de 100k: cabe completa y no se marca como muestreada
+    assert (p["rows"], p["sampled"], p["sample_size"]) == (50000, False, 100000)
+    region = next(c for c in p["columns"] if c["name"] == "region_desc")
+    assert sorted(v["count"] for v in region["top"]) == [12500] * 4
+    pedido = next(c for c in p["columns"] if c["name"] == "pedido_id")
+    assert "possible_id" in [w["code"] for w in pedido["warnings"]]
+
+
+def test_sql_editor_on_postgres(client):
+    r = client.post("/api/sql/run", json={
+        "source": "pg_dev", "query_id": "test-pg-sql-0001",
+        "sql": "SELECT region_desc, count(*) AS n FROM public.fact_ventas GROUP BY 1 ORDER BY 1",
+    })
+    assert r.status_code == 200, r.text
+    assert r.json()["rows"] == [["Bajío", 12500], ["Centro", 12500], ["Norte", 12500], ["Sur", 12500]]
+    escape = client.post("/api/sql/run", json={
+        "source": "pg_dev", "query_id": "test-pg-sql-0002",
+        "sql": "SELECT * FROM pg_catalog.pg_user",
+    })
+    assert escape.status_code == 422
+
+
+def test_demo_fase5_venta_neta_por_region(client):
+    """Demo de la Fase 5 con el modelo de ejemplo del repo: barras → tabla → pastel, mismos números."""
+    from pathlib import Path
+
+    import yaml
+
+    example = Path(__file__).resolve().parents[2] / "examples/semantic/ventas.yaml"
+    model = yaml.safe_load(example.read_text(encoding="utf-8")) | {"source": "pg_dev"}
+    assert client.post("/api/semantic/check", json=model).json() == []
+    assert client.put("/api/semantic/ventas", json=model).status_code == 200
+
+    results = {}
+    for mark in ("bar", "table", "pie"):
+        r = client.post("/api/visual/query", json={"model": "ventas", "visual": {
+            "mark": mark, "measure": "venta_neta", "dimension": "region"}})
+        assert r.status_code == 200, r.text
+        results[mark] = r.json()
+    assert results["bar"]["rows"] == results["table"]["rows"] == results["pie"]["rows"]
+    assert sorted(r[0] for r in results["bar"]["rows"]) == ["Bajío", "Centro", "Norte", "Sur"]
+    assert results["bar"]["allowed_marks"] == ["table", "bar", "pie"]
+    assert '"pg_dev"."public"."fact_ventas"' in results["bar"]["sql"]

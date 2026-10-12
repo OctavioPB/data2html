@@ -11,10 +11,10 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Annotated, Self
 
-import sqlglot
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlglot import exp
-from sqlglot.errors import ParseError
+
+from data2html.spec.expr import ExpressionError, parse_expression
 
 MAX_LIMIT = 1000
 NAME_PATTERN = r"^[a-z_][a-z0-9_]{0,62}$"
@@ -29,7 +29,7 @@ class InvalidExplore(ValueError):
 # ------------------------------------------------------------------ petición
 
 
-class FilterOp(StrEnum):
+class ExploreOp(StrEnum):
     eq = "="
     ne = "!="
     lt = "<"
@@ -44,8 +44,8 @@ class FilterOp(StrEnum):
     not_null = "not_null"
 
 
-_NO_VALUE = {FilterOp.is_null, FilterOp.not_null}
-_TEXT_OPS = {FilterOp.contains, FilterOp.starts_with}
+_NO_VALUE = {ExploreOp.is_null, ExploreOp.not_null}
+_TEXT_OPS = {ExploreOp.contains, ExploreOp.starts_with}
 
 
 class _Strict(BaseModel):
@@ -59,7 +59,7 @@ class SortKey(_Strict):
 
 class ColumnFilter(_Strict):
     column: str
-    op: FilterOp
+    op: ExploreOp
     value: Scalar | Annotated[list[Scalar], Field(max_length=500)] | None = None
 
     @model_validator(mode="after")
@@ -68,10 +68,10 @@ class ColumnFilter(_Strict):
         if self.op in _NO_VALUE:
             if v is not None:
                 raise ValueError(f"{self.op.value} no lleva valor")
-        elif self.op is FilterOp.between:
+        elif self.op is ExploreOp.between:
             if not (isinstance(v, list) and len(v) == 2):
                 raise ValueError("between espera [desde, hasta]")
-        elif self.op is FilterOp.in_:
+        elif self.op is ExploreOp.in_:
             if not (isinstance(v, list) and v):
                 raise ValueError("in espera una lista no vacía")
         elif v is None or isinstance(v, list):
@@ -96,28 +96,15 @@ class ComputedColumn(_Strict):
 
 # ------------------------------------------------------------------ columnas calculadas
 
-_FORBIDDEN: tuple[type[exp.Expr], ...] = (
-    exp.Query, exp.Subquery, exp.AggFunc, exp.Window, exp.Table, exp.Star,
-    exp.Placeholder, exp.Parameter, exp.Anonymous,
-)
-
-
 def parse_computed(expr: str, columns: set[str]) -> exp.Expr:
-    """Expresión escalar sobre columnas existentes, o `InvalidExplore` con el motivo."""
+    """Expresión escalar (por fila) sobre columnas existentes, o `InvalidExplore` con el motivo."""
     try:
-        tree = sqlglot.parse_one(expr, read="duckdb")
-    except ParseError as e:
-        raise InvalidExplore(f"expresión inválida: {e.errors[0]['description'] if e.errors else e}") from e
-    for node in tree.walk():
-        if isinstance(node, exp.Anonymous):
-            raise InvalidExplore(f"función no permitida: {node.name}")
-        if isinstance(node, _FORBIDDEN):
-            raise InvalidExplore(f"no se permite {node.key.upper()} en una columna calculada")
-        if isinstance(node, exp.Column):
-            if node.table:
-                raise InvalidExplore(f"usa el nombre de columna sin prefijo: {node.sql('duckdb')}")
-            if node.name not in columns:
-                raise InvalidExplore(f"columna desconocida: {node.name}")
+        tree, used = parse_expression(expr, aggregate=False)
+    except ExpressionError as e:
+        raise InvalidExplore(str(e)) from e
+    unknown = sorted(used - columns)
+    if unknown:
+        raise InvalidExplore(f"columna desconocida: {unknown[0]}")
     return tree
 
 
@@ -169,25 +156,39 @@ def _ilike(target: exp.Expr, pattern: exp.Expr) -> exp.Expr:
 
 def _filter(f: ColumnFilter, type_: str, p: _Params) -> exp.Expr:
     c = _col(f.column)
-    if f.op is FilterOp.is_null:
+    if f.op is ExploreOp.is_null:
         return exp.Is(this=c, expression=exp.Null())
-    if f.op is FilterOp.not_null:
+    if f.op is ExploreOp.not_null:
         return exp.Not(this=exp.Is(this=c, expression=exp.Null()))
     if f.op in _TEXT_OPS:
         v = _escape_like(str(f.value))
-        return _ilike(c, p.add(f"%{v}%" if f.op is FilterOp.contains else f"{v}%"))
-    if f.op is FilterOp.between:
+        return _ilike(c, p.add(f"%{v}%" if f.op is ExploreOp.contains else f"{v}%"))
+    if f.op is ExploreOp.between:
         assert isinstance(f.value, list)
         lo, hi = (_typed(p.add(v), type_) for v in f.value)
         return exp.Between(this=c, low=lo, high=hi)
-    if f.op is FilterOp.in_:
+    if f.op is ExploreOp.in_:
         assert isinstance(f.value, list)
         return exp.In(this=c, expressions=[_typed(p.add(v), type_) for v in f.value])
-    cmp: dict[FilterOp, type[exp.Binary]] = {
-        FilterOp.eq: exp.EQ, FilterOp.ne: exp.NEQ, FilterOp.lt: exp.LT,
-        FilterOp.le: exp.LTE, FilterOp.gt: exp.GT, FilterOp.ge: exp.GTE,
+    cmp: dict[ExploreOp, type[exp.Binary]] = {
+        ExploreOp.eq: exp.EQ, ExploreOp.ne: exp.NEQ, ExploreOp.lt: exp.LT,
+        ExploreOp.le: exp.LTE, ExploreOp.gt: exp.GT, ExploreOp.ge: exp.GTE,
     }
     return cmp[f.op](this=c, expression=_typed(p.add(f.value), type_))
+
+
+def base_select(
+    relation: tuple[str, ...], columns: dict[str, str], computed: list[ComputedColumn]
+) -> tuple[exp.Select, dict[str, str]]:
+    """`SELECT *, <calculadas> FROM relation` y los tipos de todas sus columnas."""
+    types = dict(columns)
+    projections: list[exp.Expr] = [exp.Star()]
+    for cc in computed:
+        if cc.name in types:
+            raise InvalidExplore(f"la columna calculada {cc.name!r} choca con una existente")
+        projections.append(exp.alias_(parse_computed(cc.expr, set(columns)), cc.name, quoted=True))
+        types[cc.name] = cc.type
+    return exp.select(*projections).from_(_table(relation)), types
 
 
 def build_explore(
@@ -198,13 +199,7 @@ def build_explore(
 ) -> ExploreSQL:
     """`relation`: nombre calificado de la tabla (`DataSource.relation`); `columns`: nombre → tipo
     DuckDB (del catálogo). Devuelve SQL DuckDB parametrizado."""
-    types = dict(columns)
-    projections: list[exp.Expr] = [exp.Star()]
-    for cc in computed:
-        if cc.name in types:
-            raise InvalidExplore(f"la columna calculada {cc.name!r} choca con una existente")
-        projections.append(exp.alias_(parse_computed(cc.expr, set(columns)), cc.name, quoted=True))
-        types[cc.name] = cc.type
+    base, types = base_select(relation, columns, computed)
 
     def known(name: str) -> str:
         if name not in types:
@@ -221,7 +216,6 @@ def build_explore(
         else:
             conds.append(exp.false())
 
-    base = exp.select(*projections).from_(_table(relation))
     filtered = exp.select("*").from_("_t").with_("_t", as_=base)
     if conds:
         filtered = filtered.where(exp.and_(*conds))

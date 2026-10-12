@@ -6,8 +6,11 @@ description: Usar al implementar o mejorar el perfilado EDA (backend/src/data2ht
 # Perfilado EDA
 
 ## Por columna
-- Base: `SUMMARIZE <tabla>` de DuckDB (min, max, aprox. distintos, nulos, cuantiles).
-- Numéricas: histograma con bins de Freedman-Diaconis (máx. 50), outliers por IQR (1.5×).
+- Base: las mismas métricas que `SUMMARIZE` (min, max, distintos, nulos, cuantiles), pero como un
+  SELECT de agregados (`profiling/profiler.py`): `SUMMARIZE` no es un SELECT y la validación de SQL
+  (ADR 0007) lo rechaza. Distintos exactos (`count(DISTINCT)`), no aproximados.
+- Numéricas: histograma con bins de Freedman-Diaconis (máx. 50, nunca más que valores distintos;
+  enteros de rango corto: una barra por valor), outliers por IQR (1.5×).
 - Categóricas: top-20 + "otros". Temporales: rango y conteo por periodo.
 
 ## Avisos (cada uno con umbral configurable)

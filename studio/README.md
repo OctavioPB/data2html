@@ -27,6 +27,10 @@ si `api.ts` no corresponde a `openapi.json`. Al cambiar la API: vuelca el OpenAP
 - React `18.3`: Glide Data Grid 6.0.3 (estable) declara React ≤ 18; su soporte de React 19 solo existe en
   la 6.0.4-alpha. Subir a React 19 cuando salga una 6.x estable que lo declare.
 
+## Carga diferida
+
+El editor SQL (CodeMirror + ECharts, ~1 MB) es un chunk aparte: solo se descarga al abrir `#/sql`.
+
 ## Demo de 5M filas (Fase 2)
 
 ```bash

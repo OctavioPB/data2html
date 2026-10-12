@@ -18,8 +18,16 @@ visuals:
     filters: [{ dimension: fecha, op: gte, param: anio }]
     layout: { x: 3, y: 0, w: 9, h: 4 }
   - id: tendencia
-    title: Pedidos por fecha
+    title: Pedidos por mes
     mark: line
     dimension: fecha
+    time_grain: month
     measure: pedidos
-    layout: { x: 0, y: 4, w: 12, h: 4 }
+    layout: { x: 0, y: 4, w: 8, h: 4 }
+  - id: por_canal_minorista
+    title: Venta neta por canal (sin mayoreo)
+    mark: pie
+    dimension: canal
+    measure: venta_neta
+    filters: [{ dimension: canal, op: neq, value: Mayoreo }]
+    layout: { x: 8, y: 4, w: 4, h: 4 }

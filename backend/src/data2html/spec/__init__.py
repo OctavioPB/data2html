@@ -11,11 +11,12 @@ from data2html.spec.models import (
     Report,
     RlsRule,
     SemanticModel,
+    TimeGrain,
     Visual,
     validate_report,
 )
 
 __all__ = [
     "Dimension", "FieldType", "Filter", "Layout", "Mark", "Measure", "Report",
-    "RlsRule", "SemanticModel", "Visual", "allowed_marks", "validate_report",
+    "RlsRule", "SemanticModel", "TimeGrain", "Visual", "allowed_marks", "validate_report",
 ]

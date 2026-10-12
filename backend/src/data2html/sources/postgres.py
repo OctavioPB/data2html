@@ -23,7 +23,7 @@ from data2html.settings import Settings
 from data2html.sources.base import ColumnInfo, Identity, TableInfo
 from data2html.sources.catalog_meta import CatalogMeta
 from data2html.sources.engine import new_duckdb, sql_ident, sql_literal
-from data2html.sources.errors import NotFound, QueryInterrupted, SourceUnavailable
+from data2html.sources.errors import Deadline, NotFound, SourceUnavailable
 from data2html.sources.registry import PostgresConfig
 from data2html.sqlgen.validate import ensure_single_select
 
@@ -165,18 +165,17 @@ class PostgresSource:
         ensure_single_select(sql, self.dialect)
         qid = query_id or uuid.uuid4().hex
         cur = self._cursor()
-        timer = threading.Timer(timeout_s, cur.interrupt)
         with self._lock:
             self._running[qid] = cur
-        timer.start()
+        deadline = Deadline(timeout_s, cur.interrupt)
         try:
-            return cur.execute(sql, params or None).to_arrow_table()
+            with deadline:
+                return cur.execute(sql, params or None).to_arrow_table()
         except duckdb.InterruptException as e:
-            raise QueryInterrupted(f"consulta cancelada o con más de {timeout_s}s") from e
+            raise deadline.interrupted() from e
         except duckdb.IOException as e:
             raise self._lost(e) from None
         finally:
-            timer.cancel()
             with self._lock:
                 self._running.pop(qid, None)
             cur.close()

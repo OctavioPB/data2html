@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { Schemas } from '../api/client'
 import { useCatalog, usePatchDescriptions } from '../api/queries'
 import { Explorer } from '../explore/Explorer'
+import { ProfileView } from '../profile/ProfileView'
 import { useStudio, type TableRef } from '../store'
 
 export function TableDetail({ tableRef }: { tableRef: TableRef }) {
@@ -29,16 +30,17 @@ export function TableDetail({ tableRef }: { tableRef: TableRef }) {
           <button role="tab" aria-selected={tab === 'data'} onClick={() => setTab('data')}>
             Datos
           </button>
+          <button role="tab" aria-selected={tab === 'profile'} onClick={() => setTab('profile')}>
+            Perfil
+          </button>
           <button role="tab" aria-selected={tab === 'schema'} onClick={() => setTab('schema')}>
             Esquema
           </button>
         </nav>
       </header>
-      {tab === 'data' ? (
-        <Explorer key={key} source={tableRef.source} table={table} />
-      ) : (
-        <TableForm key={key} tableRef={tableRef} table={table} />
-      )}
+      {tab === 'data' && <Explorer key={key} source={tableRef.source} table={table} />}
+      {tab === 'profile' && <ProfileView key={key} source={tableRef.source} table={table} />}
+      {tab === 'schema' && <TableForm key={key} tableRef={tableRef} table={table} />}
     </div>
   )
 }

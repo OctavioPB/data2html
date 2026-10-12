@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRef } from 'react'
 
 import { api, type Schemas } from './client'
 
@@ -8,10 +9,13 @@ async function unwrap<T>(req: Promise<{ data?: T; error?: unknown; response: Res
   return data as T
 }
 
-function errorMessage(error: unknown, status: number): string {
+export function errorMessage(error: unknown, status: number): string {
   const detail = (error as { detail?: unknown } | undefined)?.detail
   if (typeof detail === 'string') return detail
-  if (Array.isArray(detail)) return detail.map((d: { msg?: string }) => d.msg ?? '').join('; ')
+  // errores de validación de Pydantic: solo el mensaje, sin el prefijo técnico "Value error, "
+  if (Array.isArray(detail)) {
+    return detail.map((d: { msg?: string }) => (d.msg ?? '').replace(/^Value error, /, '')).join('; ')
+  }
   return `HTTP ${status}`
 }
 
@@ -90,5 +94,148 @@ export function useDeleteComputed(source: string, table: string) {
         }),
       ),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['catalog'] }),
+  })
+}
+
+/** Perfil EDA. `cancel()` detiene el cálculo en el servidor (POST /api/cancel/{query_id}). */
+export function useProfile(source: string, table: string, computedKey: string) {
+  const running = useRef<string | null>(null)
+  const query = useQuery({
+    queryKey: ['profile', source, table, computedKey],
+    queryFn: ({ signal }) => {
+      const queryId = newQueryId()
+      running.current = queryId
+      return unwrap(
+        api.GET('/api/profile/{source}/{table}', {
+          params: { path: { source, table }, query: { query_id: queryId } },
+          signal,
+        }),
+      )
+    },
+    staleTime: Infinity, // el backend cachea; "Recalcular" fuerza
+    retry: false,
+  })
+  const cancel = () => {
+    if (running.current) void cancelJob(running.current)
+  }
+  return { ...query, cancel }
+}
+
+export function useRefreshProfile(source: string, table: string, computedKey: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () =>
+      unwrap(
+        api.GET('/api/profile/{source}/{table}', {
+          params: { path: { source, table }, query: { refresh: true } },
+        }),
+      ),
+    onSuccess: (data) => qc.setQueryData(['profile', source, table, computedKey], data),
+  })
+}
+
+export function useSqlHistory() {
+  return useQuery({
+    queryKey: ['sql-history'],
+    queryFn: () => unwrap(api.GET('/api/sql/history')),
+  })
+}
+
+export function useSavedQueries() {
+  return useQuery({
+    queryKey: ['sql-saved'],
+    queryFn: () => unwrap(api.GET('/api/sql/saved')),
+  })
+}
+
+export function useSaveQuery() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ name, ...body }: { name: string } & Schemas['SaveIn']) =>
+      unwrap(api.PUT('/api/sql/saved/{name}', { params: { path: { name } }, body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['sql-saved'] }),
+  })
+}
+
+export function useDeleteSaved() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (name: string) =>
+      unwrap(api.DELETE('/api/sql/saved/{name}', { params: { path: { name } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['sql-saved'] }),
+  })
+}
+
+export function useCompat(dimension: Schemas['FieldType'] | null, hasColor: boolean) {
+  return useQuery({
+    queryKey: ['compat', dimension, hasColor],
+    queryFn: () =>
+      unwrap(
+        api.GET('/api/compat', {
+          params: { query: { dimension: dimension ?? undefined, has_color: hasColor } },
+        }),
+      ),
+    staleTime: Infinity,
+  })
+}
+
+/** Cancela una consulta del editor o un perfilado (idempotente). */
+export function cancelJob(queryId: string) {
+  return api.POST('/api/cancel/{query_id}', { params: { path: { query_id: queryId } } })
+}
+
+export function newQueryId(): string {
+  return crypto.randomUUID().replaceAll('-', '')
+}
+
+// ------------------------------------------------------------------ modelo semántico (Fase 5)
+
+export function useModels() {
+  return useQuery({ queryKey: ['models'], queryFn: () => unwrap(api.GET('/api/semantic')) })
+}
+
+export function useCheckModel(model: Schemas['SemanticModel'] | null) {
+  return useQuery({
+    queryKey: ['model-check', model],
+    queryFn: () => unwrap(api.POST('/api/semantic/check', { body: model! })),
+    enabled: model !== null,
+    retry: false,
+    staleTime: 30_000,
+  })
+}
+
+export function useSaveModel() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (model: Schemas['SemanticModel']) =>
+      unwrap(api.PUT('/api/semantic/{name}', { params: { path: { name: model.name } }, body: model })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['models'] })
+      void qc.invalidateQueries({ queryKey: ['visual'] })
+    },
+  })
+}
+
+export function useDeleteModel() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (name: string) => unwrap(api.DELETE('/api/semantic/{name}', { params: { path: { name } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['models'] }),
+  })
+}
+
+export function useVisualQuery(req: Schemas['VisualRequest'] | null) {
+  return useQuery({
+    queryKey: ['visual', req],
+    queryFn: ({ signal }) => unwrap(api.POST('/api/visual/query', { body: req!, signal })),
+    enabled: req !== null,
+    retry: false,
+    placeholderData: (prev) => prev, // al cambiar de mark/filtro, conservar el gráfico anterior mientras llega
+  })
+}
+
+export function useSuggest() {
+  return useMutation({
+    mutationFn: (body: Schemas['SuggestIn']) => unwrap(api.POST('/api/semantic/suggest', { body })),
   })
 }

@@ -1,0 +1,19 @@
+# Modelo semántico de ejemplo. Las medidas se definen AQUÍ una sola vez.
+name: ventas
+source: postgres_dev          # id de conexión registrada; credenciales en .env
+table: public.fact_ventas
+dimensions:
+  region:   { column: region_desc, type: nominal,  description: "Región comercial" }
+  canal:    { column: canal,       type: nominal }
+  fecha:    { column: fecha_venta, type: temporal }
+measures:
+  venta_neta:
+    sql: SUM(monto_bruto - descuento)
+    format: currency
+    owner: finanzas
+    description: "Venta bruta menos descuentos, sin IVA"
+  pedidos:
+    sql: COUNT(DISTINCT pedido_id)
+    owner: comercial
+    description: "Pedidos únicos"
+rls: { column: region_desc, claim: groups }

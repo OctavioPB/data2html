@@ -146,6 +146,208 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/profile/{source}/{table}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Profile
+         * @description `query_id` opcional: el studio lo manda para poder cancelar con POST /api/cancel/{query_id}.
+         */
+        get: operations["get_profile_api_profile__source___table__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sql/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run */
+        post: operations["run_api_sql_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sql/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** History */
+        get: operations["history_api_sql_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sql/saved": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Saved */
+        get: operations["list_saved_api_sql_saved_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sql/saved/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save */
+        put: operations["save_api_sql_saved__name__put"];
+        post?: never;
+        /** Delete Saved */
+        delete: operations["delete_saved_api_sql_saved__name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cancel/{query_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Job
+         * @description Cancela una consulta del editor o un perfilado en curso. Idempotente.
+         */
+        post: operations["cancel_job_api_cancel__query_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/semantic": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Models */
+        get: operations["list_models_api_semantic_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/semantic/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Model */
+        get: operations["get_model_api_semantic__name__get"];
+        /** Put Model */
+        put: operations["put_model_api_semantic__name__put"];
+        post?: never;
+        /** Delete Model */
+        delete: operations["delete_model_api_semantic__name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/semantic/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check
+         * @description Valida sin guardar (editor en vivo): forma + catálogo + cada medida ejecutada con WHERE false.
+         */
+        post: operations["check_api_semantic_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/semantic/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suggest
+         * @description Consulta del editor SQL → medida (+ dimensión) propuesta para el modelo de esa tabla.
+         */
+        post: operations["suggest_api_semantic_suggest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/visual/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Visual Query */
+        post: operations["visual_query_api_visual_query_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -184,6 +386,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Bin */
+        Bin: {
+            /** Start */
+            start: number;
+            /** End */
+            end: number;
+            /** Count */
+            count: number;
+        };
         /** Body_csv_preview_api_csv_preview_post */
         Body_csv_preview_api_csv_preview_post: {
             /** File */
@@ -226,7 +437,7 @@ export interface components {
         ColumnFilter: {
             /** Column */
             column: string;
-            op: components["schemas"]["FilterOp"];
+            op: components["schemas"]["ExploreOp"];
             /** Value */
             value?: string | number | boolean | (string | number | boolean)[] | null;
         };
@@ -244,6 +455,11 @@ export interface components {
             /** Warnings */
             warnings?: string[];
         };
+        /**
+         * ColumnKind
+         * @enum {string}
+         */
+        ColumnKind: "numeric" | "temporal" | "text" | "boolean" | "other";
         /** ColumnOut */
         ColumnOut: {
             /** Name */
@@ -252,6 +468,57 @@ export interface components {
             type: string;
             /** Description */
             description: string;
+        };
+        /** ColumnProfile */
+        ColumnProfile: {
+            /** Name */
+            name: string;
+            /** Type */
+            type: string;
+            kind: components["schemas"]["ColumnKind"];
+            /** Computed */
+            computed: boolean;
+            /** Non Null */
+            non_null: number;
+            /** Nulls */
+            nulls: number;
+            /** Null Ratio */
+            null_ratio: number;
+            /** Distinct */
+            distinct: number;
+            /** Distinct Ratio */
+            distinct_ratio: number;
+            /** Min */
+            min?: number | string | null;
+            /** Max */
+            max?: number | string | null;
+            /** Mean */
+            mean?: number | null;
+            /** Std */
+            std?: number | null;
+            /** Q1 */
+            q1?: number | null;
+            /** Median */
+            median?: number | null;
+            /** Q3 */
+            q3?: number | null;
+            /** Histogram */
+            histogram?: components["schemas"]["Bin"][] | null;
+            outliers?: components["schemas"]["Outliers"] | null;
+            /** Min Length */
+            min_length?: number | null;
+            /** Max Length */
+            max_length?: number | null;
+            /** Top */
+            top?: components["schemas"]["ValueCount"][] | null;
+            /** Other Count */
+            other_count?: number | null;
+            /** Period Unit */
+            period_unit?: ("year" | "month" | "day" | "hour") | null;
+            /** Periods */
+            periods?: components["schemas"]["PeriodCount"][] | null;
+            /** Warnings */
+            warnings: components["schemas"]["ProfileWarning"][];
         };
         /** Compat */
         Compat: {
@@ -285,6 +552,17 @@ export interface components {
             table: string;
             /** Columns */
             columns: components["schemas"]["ColumnChoice"][];
+        };
+        /** Correlations */
+        Correlations: {
+            /** Columns */
+            columns: string[];
+            /** N */
+            n: number;
+            /** Pearson */
+            pearson: (number | null)[][];
+            /** Spearman */
+            spearman: (number | null)[][];
         };
         /** CsvPreview */
         CsvPreview: {
@@ -324,6 +602,17 @@ export interface components {
                 [key: string]: string;
             } | null;
         };
+        /** Dimension */
+        Dimension: {
+            /** Column */
+            column: string;
+            type: components["schemas"]["FieldType"];
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+        };
         /** ExploreColumn */
         ExploreColumn: {
             /** Name */
@@ -333,6 +622,11 @@ export interface components {
             /** Computed */
             computed: boolean;
         };
+        /**
+         * ExploreOp
+         * @enum {string}
+         */
+        ExploreOp: "=" | "!=" | "<" | "<=" | ">" | ">=" | "contains" | "starts_with" | "between" | "in" | "is_null" | "not_null";
         /** ExplorePage */
         ExplorePage: {
             /** Columns */
@@ -383,10 +677,30 @@ export interface components {
          */
         FieldType: "nominal" | "ordinal" | "temporal" | "quantitative";
         /**
+         * Filter
+         * @description Filtro sobre una dimensión. El valor viene de un parámetro del reporte (`param`) o es fijo
+         *     (`value`); exactamente uno de los dos.
+         */
+        Filter: {
+            /** Dimension */
+            dimension: string;
+            op: components["schemas"]["FilterOp"];
+            /**
+             * Param
+             * @description Parámetro del reporte que aporta el valor
+             */
+            param?: string | null;
+            /**
+             * Value
+             * @description Valor fijo; lista para 'in' y [desde, hasta] para 'between'
+             */
+            value?: string | number | boolean | (string | number | boolean)[] | null;
+        };
+        /**
          * FilterOp
          * @enum {string}
          */
-        FilterOp: "=" | "!=" | "<" | "<=" | ">" | ">=" | "contains" | "starts_with" | "between" | "in" | "is_null" | "not_null";
+        FilterOp: "eq" | "neq" | "in" | "gte" | "lte" | "between";
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -399,11 +713,141 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** HistoryEntry */
+        HistoryEntry: {
+            /** At */
+            at: string;
+            /** Source */
+            source: string;
+            /** Sql */
+            sql: string;
+            /** Ok */
+            ok: boolean;
+            /** Rows */
+            rows?: number | null;
+            /** Elapsed Ms */
+            elapsed_ms: number;
+            /** Error */
+            error?: string | null;
+        };
         /**
          * Mark
          * @enum {string}
          */
         Mark: "table" | "kpi" | "bar" | "line" | "pie";
+        /** Measure */
+        Measure: {
+            /**
+             * Sql
+             * @description Una expresión agregada en dialecto DuckDB sobre columnas de la tabla del modelo, p. ej. SUM(monto_bruto - descuento). Sin subconsultas, ventanas ni funciones desconocidas; toda columna dentro de un agregado.
+             */
+            sql: string;
+            /** @default number */
+            format: components["schemas"]["MeasureFormat"];
+            /**
+             * Owner
+             * @description Responsable de la definición
+             */
+            owner: string;
+            /** Description */
+            description: string;
+        };
+        /**
+         * MeasureFormat
+         * @enum {string}
+         */
+        MeasureFormat: "number" | "currency" | "percent";
+        /** ModelEntry */
+        ModelEntry: {
+            model: components["schemas"]["SemanticModel"];
+            /** Errors */
+            errors: string[];
+        };
+        /** ModelList */
+        ModelList: {
+            /** Models */
+            models: components["schemas"]["ModelEntry"][];
+            /** Broken */
+            broken: {
+                [key: string]: string;
+            };
+        };
+        /** Outliers */
+        Outliers: {
+            /** Low Fence */
+            low_fence: number;
+            /** High Fence */
+            high_fence: number;
+            /** Below */
+            below: number;
+            /** Above */
+            above: number;
+        };
+        /** PeriodCount */
+        PeriodCount: {
+            /** Period */
+            period: string;
+            /** Count */
+            count: number;
+        };
+        /** ProfileWarning */
+        ProfileWarning: {
+            code: components["schemas"]["WarningCode"];
+            /** Message */
+            message: string;
+        };
+        /**
+         * RlsRule
+         * @description Filtro por fila para fuentes sin RLS nativo: column = valor del claim del lector.
+         */
+        RlsRule: {
+            /** Column */
+            column: string;
+            /**
+             * Claim
+             * @description Atributo de Identity, p. ej. 'groups' o 'email'
+             */
+            claim: string;
+        };
+        /** SaveIn */
+        SaveIn: {
+            /** Source */
+            source: string;
+            /** Sql */
+            sql: string;
+        };
+        /** SavedQuery */
+        SavedQuery: {
+            /** Name */
+            name: string;
+            /** Source */
+            source: string;
+            /** Sql */
+            sql: string;
+            /** Updated At */
+            updated_at: string;
+        };
+        /** SemanticModel */
+        SemanticModel: {
+            /** Name */
+            name: string;
+            /**
+             * Source
+             * @description Id de conexión registrada (nunca credenciales)
+             */
+            source: string;
+            /** Table */
+            table: string;
+            /** Dimensions */
+            dimensions: {
+                [key: string]: components["schemas"]["Dimension"];
+            };
+            /** Measures */
+            measures: {
+                [key: string]: components["schemas"]["Measure"];
+            };
+            rls?: components["schemas"]["RlsRule"] | null;
+        };
         /** SortKey */
         SortKey: {
             /** Column */
@@ -413,6 +857,80 @@ export interface components {
              * @default false
              */
             desc: boolean;
+        };
+        /** SqlPage */
+        SqlPage: {
+            /** Columns */
+            columns: components["schemas"]["ExploreColumn"][];
+            /** Rows */
+            rows: (string | number | boolean | null)[][];
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number | null;
+            /** Elapsed Ms */
+            elapsed_ms: number;
+        };
+        /** SqlRun */
+        SqlRun: {
+            /** Source */
+            source: string;
+            /** Sql */
+            sql: string;
+            /** Query Id */
+            query_id: string;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Limit
+             * @default 200
+             */
+            limit: number;
+            /**
+             * With Total
+             * @default true
+             */
+            with_total: boolean;
+            /** Timeout S */
+            timeout_s?: number | null;
+        };
+        /** SuggestIn */
+        SuggestIn: {
+            /** Source */
+            source: string;
+            /** Sql */
+            sql: string;
+        };
+        /** SuggestedDimension */
+        SuggestedDimension: {
+            /** Name */
+            name: string;
+            /** Column */
+            column: string;
+            type: components["schemas"]["FieldType"];
+            /** Exists */
+            exists: boolean;
+        };
+        /** Suggestion */
+        Suggestion: {
+            /** Source */
+            source: string;
+            /** Table */
+            table: string;
+            /** Model */
+            model: string | null;
+            dimension: components["schemas"]["SuggestedDimension"] | null;
+            /** Measure Name */
+            measure_name: string;
+            /** Measure Sql */
+            measure_sql: string;
+            /** Measure Exists */
+            measure_exists: boolean;
+            /** Warnings */
+            warnings: string[];
         };
         /** TableOut */
         TableOut: {
@@ -427,6 +945,31 @@ export interface components {
             /** Computed */
             computed: components["schemas"]["ComputedColumn"][];
         };
+        /** TableProfile */
+        TableProfile: {
+            /** Source */
+            source: string;
+            /** Table */
+            table: string;
+            /** Rows */
+            rows: number;
+            /** Sampled */
+            sampled: boolean;
+            /** Sample Size */
+            sample_size: number | null;
+            /** Columns */
+            columns: components["schemas"]["ColumnProfile"][];
+            correlations: components["schemas"]["Correlations"] | null;
+            /** Elapsed Ms */
+            elapsed_ms: number;
+            /** Profiled At */
+            profiled_at: string;
+        };
+        /**
+         * TimeGrain
+         * @enum {string}
+         */
+        TimeGrain: "day" | "week" | "month" | "quarter" | "year";
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -440,6 +983,55 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /** ValueCount */
+        ValueCount: {
+            /** Value */
+            value: string;
+            /** Count */
+            count: number;
+        };
+        /**
+         * VisualDraft
+         * @description Lo que arma el constructor: un Visual sin id/título/layout (eso llega con los reportes, Fase 6).
+         */
+        VisualDraft: {
+            mark: components["schemas"]["Mark"];
+            /** Measure */
+            measure: string;
+            /** Dimension */
+            dimension?: string | null;
+            time_grain?: components["schemas"]["TimeGrain"] | null;
+            /** Color */
+            color?: string | null;
+            /** Filters */
+            filters?: components["schemas"]["Filter"][];
+        };
+        /** VisualRequest */
+        VisualRequest: {
+            /** Model */
+            model: string;
+            visual: components["schemas"]["VisualDraft"];
+            /** Params */
+            params?: {
+                [key: string]: string | number | boolean;
+            };
+        };
+        /** VisualResult */
+        VisualResult: {
+            /** Columns */
+            columns: components["schemas"]["ExploreColumn"][];
+            /** Rows */
+            rows: (string | number | boolean | null)[][];
+            /** Sql */
+            sql: string;
+            /** Allowed Marks */
+            allowed_marks: components["schemas"]["Mark"][];
+        };
+        /**
+         * WarningCode
+         * @enum {string}
+         */
+        WarningCode: "possible_id" | "high_cardinality" | "nulls" | "constant" | "empty" | "numeric_as_text";
     };
     responses: never;
     parameters: never;
@@ -692,6 +1284,421 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExplorePage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_profile_api_profile__source___table__get: {
+        parameters: {
+            query?: {
+                refresh?: boolean;
+                query_id?: string | null;
+            };
+            header?: never;
+            path: {
+                table: string;
+                source: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableProfile"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_api_sql_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SqlRun"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SqlPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    history_api_sql_history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistoryEntry"][];
+                };
+            };
+        };
+    };
+    list_saved_api_sql_saved_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedQuery"][];
+                };
+            };
+        };
+    };
+    save_api_sql_saved__name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedQuery"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_saved_api_sql_saved__name__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_job_api_cancel__query_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                query_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_models_api_semantic_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelList"];
+                };
+            };
+        };
+    };
+    get_model_api_semantic__name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelEntry"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_model_api_semantic__name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SemanticModel"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelEntry"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_model_api_semantic__name__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_api_semantic_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SemanticModel"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggest_api_semantic_suggest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuggestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Suggestion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    visual_query_api_visual_query_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VisualRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VisualResult"];
                 };
             };
             /** @description Validation Error */

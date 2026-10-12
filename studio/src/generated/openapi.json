@@ -388,6 +388,578 @@
         }
       }
     },
+    "/api/profile/{source}/{table}": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Get Profile",
+        "description": "`query_id` opcional: el studio lo manda para poder cancelar con POST /api/cancel/{query_id}.",
+        "operationId": "get_profile_api_profile__source___table__get",
+        "parameters": [
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Table"
+            }
+          },
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
+            }
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Refresh"
+            }
+          },
+          {
+            "name": "query_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_-]{8,64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Query Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableProfile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sql/run": {
+      "post": {
+        "tags": [
+          "sql"
+        ],
+        "summary": "Run",
+        "operationId": "run_api_sql_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SqlRun"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SqlPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sql/history": {
+      "get": {
+        "tags": [
+          "sql"
+        ],
+        "summary": "History",
+        "operationId": "history_api_sql_history_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HistoryEntry"
+                  },
+                  "type": "array",
+                  "title": "Response History Api Sql History Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sql/saved": {
+      "get": {
+        "tags": [
+          "sql"
+        ],
+        "summary": "List Saved",
+        "operationId": "list_saved_api_sql_saved_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SavedQuery"
+                  },
+                  "type": "array",
+                  "title": "Response List Saved Api Sql Saved Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sql/saved/{name}": {
+      "put": {
+        "tags": [
+          "sql"
+        ],
+        "summary": "Save",
+        "operationId": "save_api_sql_saved__name__put",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80,
+              "pattern": "^[^/\\\\\\x00-\\x1f]+$",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedQuery"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "sql"
+        ],
+        "summary": "Delete Saved",
+        "operationId": "delete_saved_api_sql_saved__name__delete",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cancel/{query_id}": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Cancel Job",
+        "description": "Cancela una consulta del editor o un perfilado en curso. Idempotente.",
+        "operationId": "cancel_job_api_cancel__query_id__post",
+        "parameters": [
+          {
+            "name": "query_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Query Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/semantic": {
+      "get": {
+        "tags": [
+          "semantic"
+        ],
+        "summary": "List Models",
+        "operationId": "list_models_api_semantic_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/semantic/{name}": {
+      "get": {
+        "tags": [
+          "semantic"
+        ],
+        "summary": "Get Model",
+        "operationId": "get_model_api_semantic__name__get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelEntry"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "semantic"
+        ],
+        "summary": "Put Model",
+        "operationId": "put_model_api_semantic__name__put",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SemanticModel"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelEntry"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "semantic"
+        ],
+        "summary": "Delete Model",
+        "operationId": "delete_model_api_semantic__name__delete",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/semantic/check": {
+      "post": {
+        "tags": [
+          "semantic"
+        ],
+        "summary": "Check",
+        "description": "Valida sin guardar (editor en vivo): forma + catálogo + cada medida ejecutada con WHERE false.",
+        "operationId": "check_api_semantic_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SemanticModel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "title": "Response Check Api Semantic Check Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/semantic/suggest": {
+      "post": {
+        "tags": [
+          "semantic"
+        ],
+        "summary": "Suggest",
+        "description": "Consulta del editor SQL → medida (+ dimensión) propuesta para el modelo de esa tabla.",
+        "operationId": "suggest_api_semantic_suggest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Suggestion"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/visual/query": {
+      "post": {
+        "tags": [
+          "visual"
+        ],
+        "summary": "Visual Query",
+        "operationId": "visual_query_api_visual_query_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VisualRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisualResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -465,6 +1037,30 @@
   },
   "components": {
     "schemas": {
+      "Bin": {
+        "properties": {
+          "start": {
+            "type": "number",
+            "title": "Start"
+          },
+          "end": {
+            "type": "number",
+            "title": "End"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "count"
+        ],
+        "title": "Bin"
+      },
       "Body_csv_preview_api_csv_preview_post": {
         "properties": {
           "file": {
@@ -583,7 +1179,7 @@
             "title": "Column"
           },
           "op": {
-            "$ref": "#/components/schemas/FilterOp"
+            "$ref": "#/components/schemas/ExploreOp"
           },
           "value": {
             "anyOf": [
@@ -674,6 +1270,17 @@
         ],
         "title": "ColumnGuess"
       },
+      "ColumnKind": {
+        "type": "string",
+        "enum": [
+          "numeric",
+          "temporal",
+          "text",
+          "boolean",
+          "other"
+        ],
+        "title": "ColumnKind"
+      },
       "ColumnOut": {
         "properties": {
           "name": {
@@ -697,6 +1304,252 @@
           "description"
         ],
         "title": "ColumnOut"
+      },
+      "ColumnProfile": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ColumnKind"
+          },
+          "computed": {
+            "type": "boolean",
+            "title": "Computed"
+          },
+          "non_null": {
+            "type": "integer",
+            "title": "Non Null"
+          },
+          "nulls": {
+            "type": "integer",
+            "title": "Nulls"
+          },
+          "null_ratio": {
+            "type": "number",
+            "title": "Null Ratio"
+          },
+          "distinct": {
+            "type": "integer",
+            "title": "Distinct"
+          },
+          "distinct_ratio": {
+            "type": "number",
+            "title": "Distinct Ratio"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "mean": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean"
+          },
+          "std": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Std"
+          },
+          "q1": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Q1"
+          },
+          "median": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median"
+          },
+          "q3": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Q3"
+          },
+          "histogram": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Bin"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Histogram"
+          },
+          "outliers": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Outliers"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "min_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Length"
+          },
+          "max_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Length"
+          },
+          "top": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ValueCount"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top"
+          },
+          "other_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Other Count"
+          },
+          "period_unit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "year",
+                  "month",
+                  "day",
+                  "hour"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Unit"
+          },
+          "periods": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PeriodCount"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Periods"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/ProfileWarning"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "type",
+          "kind",
+          "computed",
+          "non_null",
+          "nulls",
+          "null_ratio",
+          "distinct",
+          "distinct_ratio",
+          "warnings"
+        ],
+        "title": "ColumnProfile"
       },
       "Compat": {
         "properties": {
@@ -792,6 +1645,64 @@
           "columns"
         ],
         "title": "ConfirmRequest"
+      },
+      "Correlations": {
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "n": {
+            "type": "integer",
+            "title": "N"
+          },
+          "pearson": {
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Pearson"
+          },
+          "spearman": {
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Spearman"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "columns",
+          "n",
+          "pearson",
+          "spearman"
+        ],
+        "title": "Correlations"
       },
       "CsvPreview": {
         "properties": {
@@ -918,6 +1829,29 @@
         "type": "object",
         "title": "DescriptionsPatch"
       },
+      "Dimension": {
+        "properties": {
+          "column": {
+            "type": "string",
+            "title": "Column"
+          },
+          "type": {
+            "$ref": "#/components/schemas/FieldType"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "column",
+          "type"
+        ],
+        "title": "Dimension"
+      },
       "ExploreColumn": {
         "properties": {
           "name": {
@@ -941,6 +1875,24 @@
           "computed"
         ],
         "title": "ExploreColumn"
+      },
+      "ExploreOp": {
+        "type": "string",
+        "enum": [
+          "=",
+          "!=",
+          "<",
+          "<=",
+          ">",
+          ">=",
+          "contains",
+          "starts_with",
+          "between",
+          "in",
+          "is_null",
+          "not_null"
+        ],
+        "title": "ExploreOp"
       },
       "ExplorePage": {
         "properties": {
@@ -1062,21 +2014,88 @@
         ],
         "title": "FieldType"
       },
+      "Filter": {
+        "properties": {
+          "dimension": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,62}$",
+            "title": "Dimension"
+          },
+          "op": {
+            "$ref": "#/components/schemas/FilterOp"
+          },
+          "param": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,62}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Param",
+            "description": "Parámetro del reporte que aporta el valor"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value",
+            "description": "Valor fijo; lista para 'in' y [desde, hasta] para 'between'"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "dimension",
+          "op"
+        ],
+        "title": "Filter",
+        "description": "Filtro sobre una dimensión. El valor viene de un parámetro del reporte (`param`) o es fijo\n(`value`); exactamente uno de los dos."
+      },
       "FilterOp": {
         "type": "string",
         "enum": [
-          "=",
-          "!=",
-          "<",
-          "<=",
-          ">",
-          ">=",
-          "contains",
-          "starts_with",
-          "between",
+          "eq",
+          "neq",
           "in",
-          "is_null",
-          "not_null"
+          "gte",
+          "lte",
+          "between"
         ],
         "title": "FilterOp"
       },
@@ -1112,6 +2131,63 @@
         ],
         "title": "Health"
       },
+      "HistoryEntry": {
+        "properties": {
+          "at": {
+            "type": "string",
+            "title": "At"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "sql": {
+            "type": "string",
+            "maxLength": 100000,
+            "title": "Sql"
+          },
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          },
+          "elapsed_ms": {
+            "type": "integer",
+            "title": "Elapsed Ms"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "at",
+          "source",
+          "sql",
+          "ok",
+          "elapsed_ms"
+        ],
+        "title": "HistoryEntry"
+      },
       "Mark": {
         "type": "string",
         "enum": [
@@ -1122,6 +2198,290 @@
           "pie"
         ],
         "title": "Mark"
+      },
+      "Measure": {
+        "properties": {
+          "sql": {
+            "type": "string",
+            "title": "Sql",
+            "description": "Una expresión agregada en dialecto DuckDB sobre columnas de la tabla del modelo, p. ej. SUM(monto_bruto - descuento). Sin subconsultas, ventanas ni funciones desconocidas; toda columna dentro de un agregado."
+          },
+          "format": {
+            "$ref": "#/components/schemas/MeasureFormat",
+            "default": "number"
+          },
+          "owner": {
+            "type": "string",
+            "title": "Owner",
+            "description": "Responsable de la definición"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sql",
+          "owner",
+          "description"
+        ],
+        "title": "Measure"
+      },
+      "MeasureFormat": {
+        "type": "string",
+        "enum": [
+          "number",
+          "currency",
+          "percent"
+        ],
+        "title": "MeasureFormat"
+      },
+      "ModelEntry": {
+        "properties": {
+          "model": {
+            "$ref": "#/components/schemas/SemanticModel"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "model",
+          "errors"
+        ],
+        "title": "ModelEntry"
+      },
+      "ModelList": {
+        "properties": {
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/ModelEntry"
+            },
+            "type": "array",
+            "title": "Models"
+          },
+          "broken": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Broken"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "models",
+          "broken"
+        ],
+        "title": "ModelList"
+      },
+      "Outliers": {
+        "properties": {
+          "low_fence": {
+            "type": "number",
+            "title": "Low Fence"
+          },
+          "high_fence": {
+            "type": "number",
+            "title": "High Fence"
+          },
+          "below": {
+            "type": "integer",
+            "title": "Below"
+          },
+          "above": {
+            "type": "integer",
+            "title": "Above"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "low_fence",
+          "high_fence",
+          "below",
+          "above"
+        ],
+        "title": "Outliers"
+      },
+      "PeriodCount": {
+        "properties": {
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "period",
+          "count"
+        ],
+        "title": "PeriodCount"
+      },
+      "ProfileWarning": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/WarningCode"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ProfileWarning"
+      },
+      "RlsRule": {
+        "properties": {
+          "column": {
+            "type": "string",
+            "title": "Column"
+          },
+          "claim": {
+            "type": "string",
+            "title": "Claim",
+            "description": "Atributo de Identity, p. ej. 'groups' o 'email'"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "column",
+          "claim"
+        ],
+        "title": "RlsRule",
+        "description": "Filtro por fila para fuentes sin RLS nativo: column = valor del claim del lector."
+      },
+      "SaveIn": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "sql": {
+            "type": "string",
+            "maxLength": 100000,
+            "minLength": 1,
+            "title": "Sql"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "sql"
+        ],
+        "title": "SaveIn"
+      },
+      "SavedQuery": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "pattern": "^[^/\\\\\\x00-\\x1f]+$",
+            "title": "Name"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "sql": {
+            "type": "string",
+            "maxLength": 100000,
+            "minLength": 1,
+            "title": "Sql"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "source",
+          "sql",
+          "updated_at"
+        ],
+        "title": "SavedQuery"
+      },
+      "SemanticModel": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,62}$",
+            "title": "Name"
+          },
+          "source": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,62}$",
+            "title": "Source",
+            "description": "Id de conexión registrada (nunca credenciales)"
+          },
+          "table": {
+            "type": "string",
+            "title": "Table"
+          },
+          "dimensions": {
+            "patternProperties": {
+              "^[a-z][a-z0-9_]{0,62}$": {
+                "$ref": "#/components/schemas/Dimension"
+              }
+            },
+            "type": "object",
+            "title": "Dimensions"
+          },
+          "measures": {
+            "patternProperties": {
+              "^[a-z][a-z0-9_]{0,62}$": {
+                "$ref": "#/components/schemas/Measure"
+              }
+            },
+            "type": "object",
+            "title": "Measures"
+          },
+          "rls": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RlsRule"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "source",
+          "table",
+          "dimensions",
+          "measures"
+        ],
+        "title": "SemanticModel"
       },
       "SortKey": {
         "properties": {
@@ -1141,6 +2501,243 @@
           "column"
         ],
         "title": "SortKey"
+      },
+      "SqlPage": {
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ExploreColumn"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "rows": {
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          },
+          "elapsed_ms": {
+            "type": "integer",
+            "title": "Elapsed Ms"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "columns",
+          "rows",
+          "offset",
+          "total",
+          "elapsed_ms"
+        ],
+        "title": "SqlPage"
+      },
+      "SqlRun": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "sql": {
+            "type": "string",
+            "maxLength": 100000,
+            "minLength": 1,
+            "title": "Sql"
+          },
+          "query_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{8,64}$",
+            "title": "Query Id"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Offset",
+            "default": 0
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "default": 200
+          },
+          "with_total": {
+            "type": "boolean",
+            "title": "With Total",
+            "default": true
+          },
+          "timeout_s": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeout S"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "sql",
+          "query_id"
+        ],
+        "title": "SqlRun"
+      },
+      "SuggestIn": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "sql": {
+            "type": "string",
+            "maxLength": 100000,
+            "minLength": 1,
+            "title": "Sql"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "sql"
+        ],
+        "title": "SuggestIn"
+      },
+      "SuggestedDimension": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "column": {
+            "type": "string",
+            "title": "Column"
+          },
+          "type": {
+            "$ref": "#/components/schemas/FieldType"
+          },
+          "exists": {
+            "type": "boolean",
+            "title": "Exists"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "column",
+          "type",
+          "exists"
+        ],
+        "title": "SuggestedDimension"
+      },
+      "Suggestion": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "table": {
+            "type": "string",
+            "title": "Table"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "dimension": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SuggestedDimension"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "measure_name": {
+            "type": "string",
+            "title": "Measure Name"
+          },
+          "measure_sql": {
+            "type": "string",
+            "title": "Measure Sql"
+          },
+          "measure_exists": {
+            "type": "boolean",
+            "title": "Measure Exists"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "table",
+          "model",
+          "dimension",
+          "measure_name",
+          "measure_sql",
+          "measure_exists",
+          "warnings"
+        ],
+        "title": "Suggestion"
       },
       "TableOut": {
         "properties": {
@@ -1189,6 +2786,87 @@
         ],
         "title": "TableOut"
       },
+      "TableProfile": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "table": {
+            "type": "string",
+            "title": "Table"
+          },
+          "rows": {
+            "type": "integer",
+            "title": "Rows"
+          },
+          "sampled": {
+            "type": "boolean",
+            "title": "Sampled"
+          },
+          "sample_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Size"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnProfile"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "correlations": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Correlations"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "elapsed_ms": {
+            "type": "integer",
+            "title": "Elapsed Ms"
+          },
+          "profiled_at": {
+            "type": "string",
+            "title": "Profiled At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "table",
+          "rows",
+          "sampled",
+          "sample_size",
+          "columns",
+          "correlations",
+          "elapsed_ms",
+          "profiled_at"
+        ],
+        "title": "TableProfile"
+      },
+      "TimeGrain": {
+        "type": "string",
+        "enum": [
+          "day",
+          "week",
+          "month",
+          "quarter",
+          "year"
+        ],
+        "title": "TimeGrain"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -1228,6 +2906,196 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "ValueCount": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value",
+          "count"
+        ],
+        "title": "ValueCount"
+      },
+      "VisualDraft": {
+        "properties": {
+          "mark": {
+            "$ref": "#/components/schemas/Mark"
+          },
+          "measure": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,62}$",
+            "title": "Measure"
+          },
+          "dimension": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,62}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dimension"
+          },
+          "time_grain": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimeGrain"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,62}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "filters": {
+            "items": {
+              "$ref": "#/components/schemas/Filter"
+            },
+            "type": "array",
+            "title": "Filters"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mark",
+          "measure"
+        ],
+        "title": "VisualDraft",
+        "description": "Lo que arma el constructor: un Visual sin id/título/layout (eso llega con los reportes, Fase 6)."
+      },
+      "VisualRequest": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,62}$",
+            "title": "Model"
+          },
+          "visual": {
+            "$ref": "#/components/schemas/VisualDraft"
+          },
+          "params": {
+            "patternProperties": {
+              "^[a-z][a-z0-9_]{0,62}$": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  }
+                ]
+              }
+            },
+            "type": "object",
+            "title": "Params"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "model",
+          "visual"
+        ],
+        "title": "VisualRequest"
+      },
+      "VisualResult": {
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ExploreColumn"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "rows": {
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "sql": {
+            "type": "string",
+            "title": "Sql"
+          },
+          "allowed_marks": {
+            "items": {
+              "$ref": "#/components/schemas/Mark"
+            },
+            "type": "array",
+            "title": "Allowed Marks"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "columns",
+          "rows",
+          "sql",
+          "allowed_marks"
+        ],
+        "title": "VisualResult"
+      },
+      "WarningCode": {
+        "type": "string",
+        "enum": [
+          "possible_id",
+          "high_cardinality",
+          "nulls",
+          "constant",
+          "empty",
+          "numeric_as_text"
+        ],
+        "title": "WarningCode"
       }
     }
   }

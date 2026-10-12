@@ -28,7 +28,7 @@ from data2html.settings import Settings
 from data2html.sources.base import ColumnInfo, Identity, TableInfo
 from data2html.sources.catalog_meta import CatalogMeta
 from data2html.sources.engine import new_duckdb, sql_ident, sql_literal
-from data2html.sources.errors import Conflict, NotFound, QueryInterrupted, SourceError, TooLarge
+from data2html.sources.errors import Conflict, Deadline, NotFound, SourceError, TooLarge
 from data2html.sqlgen.validate import ensure_single_select
 
 TABLE_RE = re.compile(r"^[a-z_][a-z0-9_]{0,62}$")
@@ -389,16 +389,15 @@ class CsvSource:
         for t in self.tables():  # CREATE VIEW no acepta parámetros; t ya pasó TABLE_RE
             path = sql_literal(str(self._parquet(t)))
             conn.execute(f"CREATE VIEW {sql_ident(t)} AS SELECT * FROM read_parquet({path})")  # noqa: S608
-        timer = threading.Timer(timeout_s, conn.interrupt)
         with self._lock:
             self._running[qid] = conn
-        timer.start()
+        deadline = Deadline(timeout_s, conn.interrupt)
         try:
-            return conn.execute(sql, params or None).to_arrow_table()
+            with deadline:
+                return conn.execute(sql, params or None).to_arrow_table()
         except duckdb.InterruptException as e:
-            raise QueryInterrupted(f"consulta cancelada o con más de {timeout_s}s") from e
+            raise deadline.interrupted() from e
         finally:
-            timer.cancel()
             with self._lock:
                 self._running.pop(qid, None)
             conn.close()

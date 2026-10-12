@@ -51,11 +51,12 @@ interface Props {
   rows: number
   getRow: (row: number) => Cell[] | undefined
   ensureRange: (start: number, end: number) => void
-  sort: SortKey[]
-  onSort: (sort: SortKey[]) => void
+  sort?: SortKey[]
+  /** Sin `onSort`, el clic en el encabezado no ordena (p. ej. resultados del editor SQL). */
+  onSort?: (sort: SortKey[]) => void
 }
 
-export function ExploreGrid({ columns, rows, getRow, ensureRange, sort, onSort }: Props) {
+export function ExploreGrid({ columns, rows, getRow, ensureRange, sort = [], onSort }: Props) {
   const dark = usePrefersDark()
 
   const gridColumns = useMemo<GridColumn[]>(
@@ -87,7 +88,7 @@ export function ExploreGrid({ columns, rows, getRow, ensureRange, sort, onSort }
   const onHeaderClicked = useCallback(
     (col: number) => {
       const name = columns[col]?.name
-      if (!name) return
+      if (!name || !onSort) return
       const cur = sort.find((k) => k.column === name)
       onSort(!cur ? [{ column: name, desc: false }] : cur.desc ? [] : [{ column: name, desc: true }])
     },

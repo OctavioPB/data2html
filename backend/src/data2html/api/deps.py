@@ -9,6 +9,8 @@ import duckdb
 from fastapi import Depends, FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
+from data2html.semantic.store import ModelNotFound
+from data2html.semantic.suggest import NotPromotable
 from data2html.settings import Settings
 from data2html.sources.base import DataSource
 from data2html.sources.catalog_meta import CatalogMeta
@@ -24,6 +26,7 @@ from data2html.sources.errors import (
 from data2html.sources.registry import SourceRegistry
 from data2html.sqlgen.explore import InvalidExplore
 from data2html.sqlgen.validate import UnsafeSQL
+from data2html.sqlgen.visual import VisualQueryError
 
 
 @lru_cache
@@ -84,6 +87,18 @@ def _json(code: int, detail: str) -> JSONResponse:
 
 
 def install_error_handlers(app: FastAPI) -> None:
+    @app.exception_handler(ModelNotFound)
+    async def _model(_: Request, e: ModelNotFound) -> JSONResponse:
+        return _json(status.HTTP_404_NOT_FOUND, f"modelo semántico desconocido: {e}")
+
+    @app.exception_handler(VisualQueryError)
+    async def _visual(_: Request, e: VisualQueryError) -> JSONResponse:
+        return _json(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e))
+
+    @app.exception_handler(NotPromotable)
+    async def _promote(_: Request, e: NotPromotable) -> JSONResponse:
+        return _json(status.HTTP_422_UNPROCESSABLE_CONTENT, f"no se puede promover: {e}")
+
     @app.exception_handler(SourceError)
     async def _source(_: Request, e: SourceError) -> JSONResponse:
         return _json(next(c for cls, c in _SOURCE_STATUS if isinstance(e, cls)), str(e))

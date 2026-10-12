@@ -12,8 +12,15 @@
     "gen:api:live": "openapi-typescript http://localhost:8000/openapi.json -o src/generated/api.ts"
   },
   "dependencies": {
+    "@codemirror/lang-sql": "^6.10.0",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.14",
     "@glideapps/glide-data-grid": "^6.0.3",
+    "@lezer/highlight": "^1.2.5",
     "@tanstack/react-query": "^5.104.2",
+    "codemirror": "^6.0.2",
+    "echarts": "^6.1.0",
     "lodash": "^4.18.1",
     "marked": "^4.3.0",
     "openapi-fetch": "^0.17.0",
