@@ -1,7 +1,7 @@
-"""Integración con el Postgres de desarrollo: `docker compose up -d postgres`.
+"""Integration with the development Postgres: `docker compose up -d postgres`.
 
-Se omiten si no hay servidor. Variables (con defaults del docker-compose de desarrollo):
-D2H_TEST_PG_HOST, D2H_TEST_PG_PORT y PG_DEV_PASSWORD.
+Skipped when there is no server. Variables (with the development docker-compose defaults):
+D2H_TEST_PG_HOST, D2H_TEST_PG_PORT and PG_DEV_PASSWORD.
 """
 
 import os
@@ -31,7 +31,7 @@ def _reachable() -> bool:
 
 pytestmark = [
     pytest.mark.postgres,
-    pytest.mark.skipif(not _reachable(), reason=f"sin Postgres en {HOST}:{PORT} (docker compose up)"),
+    pytest.mark.skipif(not _reachable(), reason=f"no Postgres at {HOST}:{PORT} (docker compose up)"),
 ]
 
 
@@ -44,7 +44,7 @@ def pg_env(monkeypatch):
 def pg(tmp_path, pg_env):
     s = Settings(data_dir=tmp_path, duckdb_memory_limit="256MB", duckdb_threads=1)
     cfg = PostgresConfig(type="postgres", host=HOST, port=PORT, database="d2h", user="d2h_reader",
-                         password_env="PG_DEV_PASSWORD")  # noqa: S106 (nombre de variable, no secreto)
+                         password_env="PG_DEV_PASSWORD")  # noqa: S106 (a variable name, not a secret)
     src = PostgresSource("pg_dev", cfg, s, CatalogMeta(s.catalog_meta_path))
     yield src
     src.close()
@@ -90,7 +90,7 @@ def test_rejects_writes_and_escape_hatches(pg, sql):
 
 
 def test_write_blocked_even_without_validation(pg):
-    """Capa 2: READ_ONLY + sandbox cerrado, aunque alguien saltara ensure_single_select."""
+    """Layer 2: READ_ONLY + locked sandbox, even if someone bypassed ensure_single_select."""
     cur = pg._cursor()
     try:
         for sql in ["DELETE FROM pg_dev.public.fact_ventas",
@@ -142,7 +142,7 @@ def test_api_profile_postgres(client):
     r = client.get("/api/profile/pg_dev/public.fact_ventas")
     assert r.status_code == 200, r.text
     p = r.json()
-    # 50k filas < muestra de 100k: cabe completa y no se marca como muestreada
+    # 50k rows < 100k sample: it fits entirely and is not flagged as sampled
     assert (p["rows"], p["sampled"], p["sample_size"]) == (50000, False, 100000)
     region = next(c for c in p["columns"] if c["name"] == "region_desc")
     assert sorted(v["count"] for v in region["top"]) == [12500] * 4
@@ -165,7 +165,7 @@ def test_sql_editor_on_postgres(client):
 
 
 def test_demo_fase5_venta_neta_por_region(client):
-    """Demo de la Fase 5 con el modelo de ejemplo del repo: barras → tabla → pastel, mismos números."""
+    """Phase 5 demo with the repo's example model: bars → table → pie, same numbers."""
     from pathlib import Path
 
     import yaml

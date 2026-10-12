@@ -16,7 +16,7 @@ T = {"ventas": ("ventas",), "public.fact_ventas": ("pg", "public", "fact_ventas"
 CSV = b"region,monto\nNorte,10\nSur,20\nNorte,5\nCentro,7\n"
 
 
-# ------------------------------------------------------------------ reescritura (pura)
+# ------------------------------------------------------------------ rewriting (pure)
 
 
 @pytest.mark.parametrize(("sql", "expected"), [
@@ -24,7 +24,7 @@ CSV = b"region,monto\nNorte,10\nSur,20\nNorte,5\nCentro,7\n"
     ("SELECT * FROM VENTAS v", 'FROM "ventas" AS v'),
     ("SELECT * FROM public.fact_ventas", 'FROM "pg"."public"."fact_ventas"'),
     ("SELECT * FROM pg.public.fact_ventas", 'FROM "pg"."public"."fact_ventas"'),
-    ("WITH ventas AS (SELECT 1 AS a) SELECT * FROM ventas", "SELECT * FROM ventas"),  # CTE: no se toca
+    ("WITH ventas AS (SELECT 1 AS a) SELECT * FROM ventas", "SELECT * FROM ventas"),  # CTE: left untouched
     ("SELECT * FROM ventas WHERE region IN (SELECT region FROM ventas)", 'IN (SELECT region FROM "ventas")'),
 ])
 def test_rewrites_catalog_tables(sql, expected):
@@ -33,7 +33,7 @@ def test_rewrites_catalog_tables(sql, expected):
 
 @pytest.mark.parametrize("sql", [
     "SELECT * FROM otra_tabla",
-    "SELECT * FROM fact_ventas",                       # sin esquema no es del catálogo
+    "SELECT * FROM fact_ventas",                       # without the schema it is not a catalog name
     "SELECT * FROM information_schema.tables",
     "SELECT * FROM system.main.duckdb_settings",
     "SELECT * FROM otra_db.public.fact_ventas",
@@ -101,7 +101,7 @@ def test_paging(client):
 def test_errors_are_422_and_recorded(client):
     assert run(client, "SELECT * FROM no_existe").status_code == 422
     assert run(client, "DROP TABLE ventas").status_code == 422
-    assert run(client, "SELECT nope FROM ventas").status_code == 422      # binder de DuckDB
+    assert run(client, "SELECT nope FROM ventas").status_code == 422      # DuckDB binder
     assert client.post("/api/sql/run", json={"source": "otra", "sql": "SELECT 1", "query_id": qid()}
                        ).status_code == 404
     assert client.post("/api/sql/run", json={"source": "csv", "sql": "SELECT 1", "query_id": "x"}
@@ -145,7 +145,7 @@ def test_cancel_running_query(client):
     assert client.post(f"/api/cancel/{query_id}").status_code == 204
     t.join(timeout=20)
     assert result["r"].status_code == 504
-    assert result["r"].json()["detail"] == "consulta cancelada"
+    assert result["r"].json()["detail"] == "query cancelled"
     assert time.perf_counter() - started < 10
 
 
@@ -159,7 +159,7 @@ def test_cancelled_before_start(client):
 def test_timeout_is_capped(client):
     r = run(client, SLOW, timeout_s=1)
     assert r.status_code == 504
-    assert "tiempo límite de 1 s" in r.json()["detail"]
+    assert "1 s time limit" in r.json()["detail"]
 
 
 def test_profile_accepts_query_id_and_can_be_cancelled(client):

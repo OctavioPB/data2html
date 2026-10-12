@@ -1,4 +1,4 @@
-"""Metadatos editables del catálogo (descripciones y columnas calculadas), aparte de los datos."""
+"""Editable catalog metadata (descriptions and computed columns), kept apart from the data."""
 
 from __future__ import annotations
 
@@ -69,7 +69,7 @@ class CatalogMeta:
         return self._modify(source, table, change)
 
     def put_computed(self, source: str, table: str, col: ComputedColumn) -> TableMeta:
-        """Agrega o reemplaza (por nombre) una columna calculada ya validada."""
+        """Add or replace (by name) an already validated computed column."""
 
         def change(meta: TableMeta) -> None:
             meta.computed = [c for c in meta.computed if c.name != col.name] + [col]

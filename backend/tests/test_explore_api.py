@@ -69,7 +69,7 @@ def test_computed_column_lifecycle(client):
     assert page["columns"][-1] == {"name": "con_iva", "type": cc["type"], "computed": True}
     assert page["rows"][0][-1] == pytest.approx(29.0)
 
-    # descripciones también para calculadas
+    # descriptions work for computed columns too
     r = client.patch("/api/catalog/csv/ventas", json={"columns": {"con_iva": "Monto con IVA"}})
     assert r.status_code == 200
 
@@ -78,10 +78,10 @@ def test_computed_column_lifecycle(client):
 
 
 @pytest.mark.parametrize(("body", "msg"), [
-    ({"name": "x", "expr": "read_text('/etc/passwd')"}, "no permitida"),
+    ({"name": "x", "expr": "read_text('/etc/passwd')"}, "not allowed"),
     ({"name": "x", "expr": "(SELECT 1)"}, "SUBQUERY"),
-    ({"name": "x", "expr": "monto + region"}, ""),  # error de tipos: lo detecta DuckDB al probarla
-    ({"name": "monto", "expr": "1"}, "ya existe"),
+    ({"name": "x", "expr": "monto + region"}, ""),  # type error: DuckDB catches it on trial
+    ({"name": "monto", "expr": "1"}, "already exists"),
     ({"name": "Mal Nombre", "expr": "1"}, ""),
 ])
 def test_computed_rejected(client, body, msg):
@@ -92,7 +92,7 @@ def test_computed_rejected(client, body, msg):
 
 @pytest.mark.parametrize(("value", "cell"), [
     (None, None), (3, 3), (2**60, str(2**60)), (decimal.Decimal("1.5"), 1.5),
-    (dt.date(2026, 1, 2), "2026-01-02"), (b"\x00\x01", "<binario, 2 bytes>"), ([1, 2], "[1, 2]"),
+    (dt.date(2026, 1, 2), "2026-01-02"), (b"\x00\x01", "<binary, 2 bytes>"), ([1, 2], "[1, 2]"),
 ])
 def test_to_cell(value, cell):
     assert to_cell(value) == cell

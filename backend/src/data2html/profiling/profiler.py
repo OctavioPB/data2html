@@ -1,14 +1,14 @@
-"""Perfilado EDA de una tabla (incluidas sus columnas calculadas).
+"""EDA profiling of a table (including its computed columns).
 
-Tres pasadas, cada una una sola consulta: estadísticas de todas las columnas → detalle (histogramas,
-outliers, top-N, periodos) en un UNION ALL → correlaciones sobre una muestra.
+Three passes, each a single query: statistics for every column → detail (histograms, outliers, top-N,
+periods) in one UNION ALL → correlations over a sample.
 
-- Fuentes locales (CSV/Parquet): se perfila la tabla completa con `DataSource.execute`.
-- Fuentes remotas: se trae UNA muestra (`sample_rows`) y se perfila en un DuckDB privado, sin volver a
-  la fuente. El resultado lleva `sampled=True` y la UI lo muestra.
+- Local sources (CSV/Parquet): the whole table is profiled through `DataSource.execute`.
+- Remote sources: ONE sample (`sample_rows`) is fetched and profiled in a private DuckDB, without going
+  back to the source. The result carries `sampled=True` and the UI shows it.
 
-El SQL solo interpola identificadores citados por SQLGlot y números calculados en el servidor; todo pasa
-por `ensure_single_select` antes de ejecutarse.
+The SQL only interpolates identifiers quoted by SQLGlot and numbers computed on the server; everything
+goes through `ensure_single_select` before it runs.
 """
 
 from __future__ import annotations
@@ -27,6 +27,7 @@ import pyarrow as pa
 from sqlglot import exp
 
 from data2html import cancel
+from data2html.i18n import tr
 from data2html.profiling.models import (
     Bin,
     ColumnKind,
@@ -48,7 +49,7 @@ from data2html.sources.errors import QueryInterrupted
 from data2html.sqlgen.explore import base_select
 from data2html.sqlgen.validate import ensure_single_select
 
-LOCAL_KINDS = {"csv"}  # se perfilan completas; el resto, con muestra
+LOCAL_KINDS = {"csv"}  # profiled in full; everything else, with a sample
 
 _INT = re.compile(r"^(U?TINYINT|U?SMALLINT|U?INTEGER|U?BIGINT|U?HUGEINT|INT\d*)$", re.I)
 _FLOAT = re.compile(r"^(FLOAT|DOUBLE|REAL|DECIMAL)", re.I)
@@ -69,7 +70,7 @@ def classify(type_: str) -> ColumnKind:
 
 
 def _q(sql: str) -> exp.Query:
-    """SQL armado aquí → árbol validado. Solo identificadores citados y números del servidor."""
+    """SQL built here → validated tree. Only quoted identifiers and server-side numbers."""
     return ensure_single_select(sql)
 
 
@@ -90,7 +91,7 @@ def _f(v: object) -> float | None:
     return None
 
 
-# ------------------------------------------------------------------ ejecución
+# ------------------------------------------------------------------ execution
 
 
 class _Runner(Protocol):
@@ -101,7 +102,7 @@ class _Runner(Protocol):
 
 @dataclass
 class _SourceRunner:
-    """Consultas sobre la tabla en la fuente: `WITH _t AS (<base>) …`."""
+    """Queries over the table in the source: `WITH _t AS (<base>) …`."""
 
     src: DataSource
     base: exp.Select
@@ -119,7 +120,7 @@ class _SourceRunner:
 
 @dataclass
 class _ArrowRunner:
-    """Consultas sobre una muestra ya traída, en un DuckDB privado sin acceso a archivos."""
+    """Queries over an already fetched sample, in a private DuckDB with no file access."""
 
     table: pa.Table
     settings: Settings
@@ -142,14 +143,14 @@ class _ArrowRunner:
         try:
             return self.conn.execute(q.sql("duckdb")).to_arrow_table()
         except duckdb.InterruptException as e:
-            raise QueryInterrupted("consulta cancelada") from e
+            raise QueryInterrupted(tr("query cancelled")) from e
 
     def close(self) -> None:
         self._unhook()
         self.conn.close()
 
 
-# ------------------------------------------------------------------ pasada 1: estadísticas
+# ------------------------------------------------------------------ pass 1: statistics
 
 
 @dataclass
@@ -186,14 +187,14 @@ def _stats_query(cols: list[_Col]) -> exp.Query:
             parts += [
                 f"min(length(CAST({r} AS VARCHAR))) AS minlen_{i}",
                 f"max(length(CAST({r} AS VARCHAR))) AS maxlen_{i}",
-                # números como texto, salvo códigos con ceros a la izquierda (CP, claves): esos son texto
+                # numbers stored as text, except codes with leading zeros (postal codes, keys): those are text
                 f"count(CASE WHEN NOT regexp_matches(CAST({r} AS VARCHAR), '^[+-]?0[0-9]') "
                 f"THEN TRY_CAST(replace(CAST({r} AS VARCHAR), ',', '.') AS DOUBLE) END) AS numlike_{i}",
             ]
-    return _q("SELECT " + ", ".join(parts) + " FROM _t")  # noqa: S608 (ver _q)
+    return _q("SELECT " + ", ".join(parts) + " FROM _t")  # noqa: S608 (see _q)
 
 
-# ------------------------------------------------------------------ pasada 2: detalle
+# ------------------------------------------------------------------ pass 2: detail
 
 
 @dataclass
@@ -206,8 +207,8 @@ class _Hist:
 def hist_bins(
     mn: float, mx: float, q1: float, q3: float, n: int, distinct: int, is_int: bool, max_bins: int
 ) -> _Hist:
-    """Freedman-Diaconis, con tope `max_bins` y no más bins que valores distintos. Enteros: una barra por
-    valor si el rango cabe en `max_bins`; si no, anchos enteros."""
+    """Freedman-Diaconis, capped at `max_bins` and never more bins than distinct values. Integers: one
+    bar per value when the range fits in `max_bins`; otherwise integer widths."""
     if mx <= mn:
         return _Hist(mn, 1.0, 1)
     if is_int and mx - mn + 1 <= max_bins:
@@ -244,31 +245,33 @@ def _branch(i: int, kind: str, key_expr: str, where: str, tail: str = "") -> str
             f"count(*) AS n FROM _t WHERE {where} GROUP BY 3 {tail})")
 
 
-# ------------------------------------------------------------------ avisos
+# ------------------------------------------------------------------ warnings
 
 
 def _warnings(p: ColumnProfile, c: _Col, numlike: int | None, o: ProfileOptions) -> list[ProfileWarning]:
     w: list[ProfileWarning] = []
     if p.non_null == 0:
-        return [ProfileWarning(code=WarningCode.empty, message="columna sin valores")]
+        return [ProfileWarning(code=WarningCode.empty, message=tr("column without values"))]
     if p.null_ratio > o.nulls_ratio:
-        w.append(ProfileWarning(code=WarningCode.nulls, message=f"{p.null_ratio:.0%} de nulos"))
+        msg = tr("{ratio:.0%} null values", ratio=p.null_ratio)
+        w.append(ProfileWarning(code=WarningCode.nulls, message=msg))
     if p.distinct == 1:
-        w.append(ProfileWarning(code=WarningCode.constant, message="un solo valor distinto"))
+        w.append(ProfileWarning(code=WarningCode.constant, message=tr("a single distinct value")))
     id_like = c.kind is ColumnKind.text or (c.kind is ColumnKind.numeric and c.is_int)
     if id_like and p.non_null >= o.possible_id_min_rows and p.distinct_ratio >= o.possible_id_ratio:
-        msg = f"{p.distinct_ratio:.0%} de valores distintos: posible identificador"
+        msg = tr("{ratio:.0%} distinct values: possible identifier", ratio=p.distinct_ratio)
         w.append(ProfileWarning(code=WarningCode.possible_id, message=msg))
     elif c.kind is ColumnKind.text and p.distinct > o.high_cardinality:
         w.append(ProfileWarning(code=WarningCode.high_cardinality,
-                                message=f"{p.distinct:,} valores distintos: alta cardinalidad"))
+                                message=tr("{count:,} distinct values: high cardinality", count=p.distinct)))
     if c.kind is ColumnKind.text and numlike is not None and numlike >= o.numeric_text_ratio * p.non_null:
+        ratio = numlike / p.non_null
         w.append(ProfileWarning(code=WarningCode.numeric_as_text,
-                                message=f"{numlike / p.non_null:.0%} parecen números guardados como texto"))
+                                message=tr("{ratio:.0%} look like numbers stored as text", ratio=ratio)))
     return w
 
 
-# ------------------------------------------------------------------ orquestación
+# ------------------------------------------------------------------ orchestration
 
 
 def profile_table(
@@ -279,7 +282,7 @@ def profile_table(
     opts: ProfileOptions | None = None,
     query_id: str | None = None,
 ) -> TableProfile:
-    """`query_id`: permite cancelarlo con `cancel.request` (POST /api/cancel/{query_id})."""
+    """`query_id`: lets `cancel.request` (POST /api/cancel/{query_id}) stop it."""
     o = opts or ProfileOptions()
     t0 = time.perf_counter()
     info = src.table_info(table)
@@ -358,7 +361,7 @@ def _profile(
             p.periods = []
             trunc = f"date_trunc('{p.period_unit}', {r})"
             if c.type.strip().upper() == "DATE":
-                trunc = f"CAST({trunc} AS DATE)"  # date_trunc devuelve TIMESTAMP
+                trunc = f"CAST({trunc} AS DATE)"  # date_trunc returns TIMESTAMP
             branches.append(_branch(i, "period", trunc, f"{r} IS NOT NULL", "ORDER BY 3 LIMIT 1000"))
         elif c.kind in (ColumnKind.text, ColumnKind.boolean) and nn:
             if c.kind is ColumnKind.text:
@@ -406,7 +409,7 @@ def _profile(
 
 
 def _correlations(runner: _Runner, cols: list[_Col], o: ProfileOptions) -> Correlations | None:
-    """Pearson y Spearman (rangos promedio) sobre una muestra; solo si hay 2..max_corr_columns numéricas."""
+    """Pearson and Spearman (average ranks) over a sample; only with 2..max_corr_columns numeric columns."""
     if not 2 <= len(cols) <= o.max_corr_columns:
         return None
     k = len(cols)
@@ -421,7 +424,7 @@ def _correlations(runner: _Runner, cols: list[_Col], o: ProfileOptions) -> Corre
         for b in range(a + 1, k):
             aggs += [f"corr(x{a}, x{b}) AS p_{a}_{b}", f"corr(r{a}, r{b}) AS s_{a}_{b}"]
     sample = f"SELECT {xs} FROM _t USING SAMPLE reservoir({int(o.sample_rows)} ROWS) REPEATABLE (42)"  # noqa: S608
-    sql = f"SELECT {', '.join(aggs)} FROM (SELECT {ranks} FROM ({sample}) AS s) AS r"  # noqa: S608 (ver _q)
+    sql = f"SELECT {', '.join(aggs)} FROM (SELECT {ranks} FROM ({sample}) AS s) AS r"  # noqa: S608 (see _q)
     row = runner.run(_q(sql)).to_pylist()[0]
     pearson: list[list[float | None]] = [[1.0 if a == b else None for b in range(k)] for a in range(k)]
     spearman: list[list[float | None]] = [[1.0 if a == b else None for b in range(k)] for a in range(k)]

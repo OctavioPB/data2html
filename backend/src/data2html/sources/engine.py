@@ -1,4 +1,4 @@
-"""Conexiones DuckDB del servidor, siempre encapsuladas (ver reglas de seguridad en CLAUDE.md)."""
+"""Server-side DuckDB connections, always sandboxed (see the security rules in CLAUDE.md)."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ import duckdb
 
 
 def sql_literal(value: str) -> str:
-    """Literal de cadena SQL. Solo para valores que genera el servidor (rutas propias, formatos de
-    una lista cerrada) en sentencias que no aceptan parámetros. Nunca para entrada del usuario."""
+    """SQL string literal. Only for server-generated values (our own paths, formats from a closed
+    list) in statements that do not accept parameters. Never for user input."""
     return "'" + value.replace("'", "''") + "'"
 
 
@@ -19,7 +19,7 @@ def sql_ident(name: str) -> str:
 
 
 def ensure_extension(name: str) -> None:
-    """Instala una extensión de DuckDB (descarga única). Las conexiones del servidor solo hacen LOAD."""
+    """Install a DuckDB extension (one-time download). Server connections only LOAD."""
     with duckdb.connect(":memory:") as conn:
         conn.execute(f"INSTALL {sql_ident(name)}")
 
@@ -31,10 +31,10 @@ def new_duckdb(
     threads: int,
     setup: Callable[[duckdb.DuckDBPyConnection], None] | None = None,
 ) -> duckdb.DuckDBPyConnection:
-    """DuckDB en memoria que solo puede tocar `allowed_dirs`, sin extensiones nuevas ni red.
+    """In-memory DuckDB that can only touch `allowed_dirs`, with no new extensions and no network.
 
-    `setup` corre antes del cierre (LOAD de extensiones, secretos, ATTACH). Después la configuración
-    queda bloqueada: una consulta no puede volver a abrir el acceso externo ni adjuntar otra base.
+    `setup` runs before the lock (extension LOADs, secrets, ATTACH). Afterwards the configuration is
+    locked: a query can neither re-enable external access nor attach another database.
     """
     conn = duckdb.connect(":memory:", config={"memory_limit": memory_limit, "threads": threads})
     if setup is not None:

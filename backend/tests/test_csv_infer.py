@@ -33,13 +33,13 @@ def test_guess_types(values, type_, fmt, comma):
 def test_leading_zeros_stay_text():
     g = guess_column("cp", ["01234", "56789"])
     assert g.type is CsvType.VARCHAR
-    assert "ceros a la izquierda" in g.warnings[0]
+    assert "leading zeros" in g.warnings[0]
 
 
 def test_ambiguous_date_warns_and_assumes_day_first():
     g = guess_column("f", ["03/04/2026", "05/06/2026"])
     assert g.date_format is DateFormat.dmy_slash
-    assert "ambigua" in g.warnings[0]
+    assert "ambiguous" in g.warnings[0]
 
 
 def test_inconsistent_dates_are_text():
@@ -47,7 +47,7 @@ def test_inconsistent_dates_are_text():
 
 
 def test_decimal_comma_warns():
-    assert "coma decimal" in guess_column("m", ["1,5"]).warnings[0]
+    assert "decimal comma" in guess_column("m", ["1,5"]).warnings[0]
 
 
 def test_huge_integer_is_text():
@@ -61,7 +61,7 @@ def test_empty_column():
 
 @pytest.mark.parametrize(
     ("filename", "table"),
-    [("Ventas 2026.csv", "ventas_2026"), ("2026-ventas.CSV", "t_2026_ventas"), ("ñ.csv", "tabla")],
+    [("Ventas 2026.csv", "ventas_2026"), ("2026-ventas.CSV", "t_2026_ventas"), ("ñ.csv", "table")],
 )
 def test_suggest_table_name(filename, table):
     assert suggest_table_name(filename) == table

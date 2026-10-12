@@ -12,7 +12,7 @@ from data2html.sources.engine import new_duckdb
 from data2html.sources.errors import Conflict, NotFound, QueryInterrupted, SourceError, TooLarge
 from data2html.sqlgen.validate import UnsafeSQL
 
-# Exportación típica de Excel en español: ';', coma decimal, Latin-1, fechas d/m/a
+# Typical Spanish-locale Excel export: ';', decimal comma, Latin-1, d/m/y dates
 VENTAS = (
     "cp;región;monto;fecha;cp\n"
     "01234;Norte;1.234,50;13/04/2026;a\n"
@@ -44,7 +44,7 @@ def test_preview_detects_traps(src):
     assert types == {"cp": CsvType.VARCHAR, "región": CsvType.VARCHAR, "monto": CsvType.DOUBLE,
                      "fecha": CsvType.DATE, "cp_1": CsvType.VARCHAR}
     assert any("Latin-1" in w for w in p.warnings)
-    assert any("repetidos" in w for w in p.warnings)
+    assert any("repeated" in w for w in p.warnings)
     assert p.rows[0][:2] == ["01234", "Norte"]
 
 
@@ -52,7 +52,7 @@ def test_confirm_writes_typed_parquet(src, tmp_path):
     _load(src)
     assert (tmp_path / "csv/ventas.parquet").exists()
     assert (tmp_path / "csv/ventas.schema.json").exists()
-    assert not list((tmp_path / "uploads").iterdir())  # la subida se limpia
+    assert not list((tmp_path / "uploads").iterdir())  # the upload is cleaned up
 
     t = src.execute("SELECT * FROM ventas ORDER BY cp", {}, identity=None, timeout_s=10)
     assert t.column("cp").to_pylist() == ["01234", "05678"]
@@ -72,7 +72,7 @@ def test_confirm_rejects_existing_table(src):
 
 def test_confirm_rejects_wrong_columns(src):
     up = src.stage(io.BytesIO(VENTAS), "v.csv")
-    with pytest.raises(SourceError, match="no coinciden"):
+    with pytest.raises(SourceError, match="do not match"):
         src.confirm(ConfirmRequest(upload_id=up, table="v", columns=[{"name": "cp", "type": "VARCHAR"}]))
 
 
@@ -80,7 +80,7 @@ def test_confirm_reports_bad_conversion(src):
     up = src.stage(io.BytesIO(VENTAS), "v.csv")
     cols = [c.model_dump(exclude={"warnings"}) for c in src.preview(up).columns]
     cols[1] = {"name": "región", "type": "BIGINT"}
-    with pytest.raises(SourceError, match="convertir"):
+    with pytest.raises(SourceError, match="could not convert"):
         src.confirm(ConfirmRequest(upload_id=up, table="v", columns=cols))
 
 
@@ -90,7 +90,7 @@ def test_upload_size_limit(src):
 
 
 def test_empty_upload(src):
-    with pytest.raises(SourceError, match="vacío"):
+    with pytest.raises(SourceError, match="empty"):
         src.stage(io.BytesIO(b""), "vacio.csv")
 
 
@@ -123,11 +123,11 @@ def test_execute_rejects_non_select(src, sql):
 def test_execute_cannot_read_outside_data_dir(src, tmp_path):
     secret = tmp_path.parent / "secreto.csv"
     secret.write_text("a\n1\n")
-    sql = f"SELECT * FROM read_csv('{secret.as_posix()}')"  # noqa: S608 (ataque simulado)
-    # capa 1: la validación rechaza la función
+    sql = f"SELECT * FROM read_csv('{secret.as_posix()}')"  # noqa: S608 (simulated attack)
+    # layer 1: validation rejects the function
     with pytest.raises(UnsafeSQL, match="read_csv"):
         src.execute(sql, {}, identity=None, timeout_s=10)
-    # capa 2: aunque la validación fallara, el sandbox de DuckDB no deja leer fuera de data/csv
+    # layer 2: even if validation failed, DuckDB's sandbox does not read outside data/csv
     conn = new_duckdb(allowed_dirs=[tmp_path / "csv"], memory_limit="256MB", threads=1)
     with pytest.raises(duckdb.PermissionException):
         conn.execute(sql)

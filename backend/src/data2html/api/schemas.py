@@ -1,4 +1,4 @@
-"""Modelos de respuesta de la API (fuente de los tipos TS del studio vía OpenAPI)."""
+"""API response models (the source of the studio's TS types through OpenAPI)."""
 
 from __future__ import annotations
 

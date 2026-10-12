@@ -19,8 +19,8 @@ N = 40
 def _csv(rows: int = N) -> bytes:
     lines = ["id,cat,x,y,z,fecha,cp,num_txt,fijo,casi_vacia"]
     for i in range(1, rows + 1):
-        cat = "" if i % 4 == 0 else ["a", "b", "b"][i % 3]          # 25% nulos
-        x = 1000 if i == rows else i                                  # un outlier alto
+        cat = "" if i % 4 == 0 else ["a", "b", "b"][i % 3]          # 25% nulls
+        x = 1000 if i == rows else i                                  # one high outlier
         fecha = f"2026-0{[1, 4, 7][i % 3]}-{1 + i % 28:02d}"
         casi = "v" if i == 1 else ""
         lines.append(f"{i},{cat},{x},{2 * x},{x ** 3},{fecha},{i:05d},{i * 1.5},k,{casi}")
@@ -30,7 +30,7 @@ def _csv(rows: int = N) -> bytes:
 def _load(src: CsvSource, table: str, body: bytes) -> None:
     p = src.preview(src.stage(io.BytesIO(body), f"{table}.csv"))
     cols = [c.model_dump(exclude={"warnings"}) for c in p.columns]
-    for c in cols:  # 'num_txt' como texto a propósito, para el aviso
+    for c in cols:  # 'num_txt' as text on purpose, for the warning
         if c["name"] == "num_txt":
             c.update(type="VARCHAR", decimal_comma=False)
     src.confirm(ConfirmRequest(upload_id=p.upload_id, table=table, columns=cols))
@@ -59,11 +59,11 @@ def test_classify(t, kind):
 
 
 def test_hist_bins():
-    assert hist_bins(5, 5, 5, 5, 10, 1, False, 50).bins == 1                 # constante
-    h = hist_bins(1, 20, 5, 15, 1000, 20, True, 50)                         # enteros de rango corto
+    assert hist_bins(5, 5, 5, 5, 10, 1, False, 50).bins == 1                 # constant
+    h = hist_bins(1, 20, 5, 15, 1000, 20, True, 50)                         # short-range integers
     assert (h.start, h.width, h.bins) == (1, 1.0, 20)
-    assert hist_bins(0, 1, 0.25, 0.75, 10**6, 10**6, False, 50).bins == 50  # tope max_bins
-    assert hist_bins(0, 0.3, 0.1, 0.2, 10**6, 31, False, 50).bins == 31     # no más bins que distintos
+    assert hist_bins(0, 1, 0.25, 0.75, 10**6, 10**6, False, 50).bins == 50  # max_bins cap
+    assert hist_bins(0, 0.3, 0.1, 0.2, 10**6, 31, False, 50).bins == 31     # bins <= distinct values
 
 
 def test_profile_csv(env):
@@ -77,7 +77,7 @@ def test_profile_csv(env):
     assert WarningCode.nulls in codes["cat"] and c["cat"].null_ratio == pytest.approx(0.25)
     assert WarningCode.constant in codes["fijo"]
     assert WarningCode.numeric_as_text in codes["num_txt"]
-    assert WarningCode.numeric_as_text not in codes["cp"]           # '00001' es un código, no un número
+    assert WarningCode.numeric_as_text not in codes["cp"]           # '00001' is a code, not a number
     assert WarningCode.possible_id in codes["cp"]
     assert WarningCode.nulls in codes["casi_vacia"]
 
@@ -101,11 +101,11 @@ def test_correlations(env):
     corr = profile_table(src, meta, "t", s).correlations
     assert corr is not None and corr.n == N
     ix = {name: i for i, name in enumerate(corr.columns)}
-    assert corr.pearson[ix["x"]][ix["y"]] == pytest.approx(1.0)          # lineal
-    assert corr.spearman[ix["x"]][ix["z"]] == pytest.approx(1.0)         # monótona
-    assert corr.pearson[ix["x"]][ix["z"]] < 0.999                        # pero no lineal
+    assert corr.pearson[ix["x"]][ix["y"]] == pytest.approx(1.0)          # linear
+    assert corr.spearman[ix["x"]][ix["z"]] == pytest.approx(1.0)         # monotonic
+    assert corr.pearson[ix["x"]][ix["z"]] < 0.999                        # but not linear
     assert all(corr.pearson[i][i] == 1.0 for i in range(len(corr.columns)))
-    assert "fijo" not in ix                                              # constante: sin correlación
+    assert "fijo" not in ix                                              # constant: no correlation
 
 
 def test_computed_columns_are_profiled(env):
@@ -116,7 +116,7 @@ def test_computed_columns_are_profiled(env):
 
 
 class _Remote:
-    """Envuelve la fuente CSV pero se declara remota: fuerza el camino con muestra."""
+    """Wraps the CSV source but declares itself remote: forces the sampling path."""
 
     kind = "postgres"
     dialect = "duckdb"
@@ -139,7 +139,7 @@ def test_remote_sources_are_sampled(tmp_path):
     assert p.correlations is not None and p.correlations.n == 1000
 
     small = profile_table(_Remote(src), meta, "grande", s, ProfileOptions(sample_rows=5000))
-    assert (small.sampled, small.rows) == (False, 3000)  # cupo completa en la muestra
+    assert (small.sampled, small.rows) == (False, 3000)  # it fit entirely in the sample
 
 
 @pytest.fixture
@@ -160,7 +160,7 @@ def test_api_profile_is_cached(client):
     assert first["rows"] == N and not first["sampled"]
     assert client.get("/api/profile/csv/t").json()["profiled_at"] == first["profiled_at"]
 
-    # una columna calculada nueva invalida la caché
+    # a new computed column invalidates the cache
     client.put("/api/catalog/csv/t/computed", json={"name": "doble", "expr": "x * 2"})
     names = [c["name"] for c in client.get("/api/profile/csv/t").json()["columns"]]
     assert names[-1] == "doble"

@@ -1,8 +1,8 @@
-"""Herramientas de desarrollo. No las importa la app.
+"""Development tools. The app does not import them.
 
-    python -m data2html.devtools demo [filas]        → data/csv/demo_ventas.parquet (default 5M filas)
-    python -m data2html.devtools install-extensions  → descarga las extensiones de DuckDB una vez
-                                                       (p. ej. al construir la imagen)
+    python -m data2html.devtools demo [filas]        → data/csv/demo_ventas.parquet (default 5M rows)
+    python -m data2html.devtools install-extensions  → downloads the DuckDB extensions once
+                                                       (e.g. when building the image)
 """
 
 from __future__ import annotations
@@ -42,19 +42,19 @@ def demo(rows: int = 5_000_000) -> None:
                 CASE WHEN random() < 0.03 THEN NULL ELSE round(random() * 0.3, 2) END AS descuento
             FROM range({int(rows)}) t(i)
         ) TO {sql_literal(str(out))} (FORMAT parquet, ROW_GROUP_SIZE 122880)
-    """)  # noqa: S608 (filas es int; ruta propia)
+    """)  # noqa: S608 (rows is an int; our own path)
     conn.close()
     out.with_suffix(".schema.json").write_text(
         json.dumps({"table": "demo_ventas", "source_file": "(generado)", "rows": rows}, indent=2),
         encoding="utf-8",
     )
-    print(f"{rows:,} filas -> {out} en {time.perf_counter() - t0:.1f}s")
+    print(f"{rows:,} rows -> {out} in {time.perf_counter() - t0:.1f}s")
 
 
 def install_extensions() -> None:
     for name in EXTENSIONS:
         ensure_extension(name)
-        print(f"extensión {name}: instalada")
+        print(f"extension {name}: installed")
 
 
 if __name__ == "__main__":

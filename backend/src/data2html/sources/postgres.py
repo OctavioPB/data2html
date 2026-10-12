@@ -1,11 +1,11 @@
-"""Fuente Postgres (DirectQuery) vía la extensión `postgres` de DuckDB.
+"""Postgres source (DirectQuery) through DuckDB's `postgres` extension.
 
-Una conexión DuckDB por fuente, de larga vida: `LOAD postgres` → secreto temporal con la contraseña
-del entorno → `ATTACH … (READ_ONLY)` → sandbox cerrado. Cada consulta usa su propio `cursor()`.
-Los filtros y proyecciones viajan a Postgres; el resto lo resuelve DuckDB.
+One long-lived DuckDB connection per source: `LOAD postgres` → temporary secret with the password from
+the environment → `ATTACH … (READ_ONLY)` → sandbox locked. Every query uses its own `cursor()`.
+Filters and projections travel to Postgres; DuckDB resolves the rest.
 
-Defensa en capas: usuario de BD con solo SELECT, ATTACH READ_ONLY, sandbox cerrado (no se puede
-adjuntar otra base) y `ensure_single_select`, que rechaza `postgres_scan/query/execute`.
+Defense in depth: SELECT-only database user, READ_ONLY attach, locked sandbox (no other database can
+be attached) and `ensure_single_select`, which rejects `postgres_scan/query/execute`.
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ import uuid
 import duckdb
 import pyarrow as pa
 
+from data2html.i18n import tr
 from data2html.settings import Settings
 from data2html.sources.base import ColumnInfo, Identity, TableInfo
 from data2html.sources.catalog_meta import CatalogMeta
@@ -31,9 +32,19 @@ log = logging.getLogger(__name__)
 _RETRY_AFTER_S = 30
 
 
+class _Failure(Exception):
+    """Connection failure kept as (message, params) so it is localized each time it is raised: the
+    cached error is reused for other requests, possibly in another language."""
+
+    def __init__(self, msgid: str, **params: object) -> None:
+        super().__init__(msgid)
+        self.msgid = msgid
+        self.params = params
+
+
 class PostgresSource:
     kind = "postgres"
-    dialect = "duckdb"  # el SQL corre en DuckDB sobre la base adjunta
+    dialect = "duckdb"  # the SQL runs in DuckDB over the attached database
 
     def __init__(self, source_id: str, cfg: PostgresConfig, settings: Settings, meta: CatalogMeta) -> None:
         self.id = source_id
@@ -44,26 +55,26 @@ class PostgresSource:
         self._lock = threading.Lock()
         self._running: dict[str, duckdb.DuckDBPyConnection] = {}
         self._failed_at = 0.0
-        self._last_error = ""
+        self._last_error = _Failure("could not connect to source {source}", source=repr(source_id))
 
-    def __repr__(self) -> str:  # sin secretos ni cadena de conexión
+    def __repr__(self) -> str:  # no secrets, no connection string
         return f"PostgresSource(id={self.id!r}, host={self._cfg.host!r}, database={self._cfg.database!r})"
 
-    # -- conexión -------------------------------------------------------------------
+    # -- connection -----------------------------------------------------------------
 
     def _setup(self, conn: duckdb.DuckDBPyConnection) -> None:
         password = os.environ.get(self._cfg.password_env)
         if password is None:
-            raise SourceUnavailable(f"falta la variable de entorno {self._cfg.password_env}")
+            raise _Failure("missing environment variable {name}", name=self._cfg.password_env)
         try:
             conn.execute("LOAD postgres")
         except duckdb.Error:
-            conn.execute("INSTALL postgres")  # primera vez en esta máquina
+            conn.execute("INSTALL postgres")  # first time on this machine
             conn.execute("LOAD postgres")
         c = self._cfg
         secret = sql_ident(f"{self.id}_secret")
-        # CREATE SECRET no acepta parámetros; los valores vienen de la config validada y del entorno.
-        # Un error aquí puede citar la sentencia (con la contraseña): se descarta el mensaje original.
+        # CREATE SECRET takes no parameters; the values come from the validated config and the environment.
+        # An error here may quote the statement (with the password): the original message is dropped.
         try:
             conn.execute(
                 f"CREATE TEMPORARY SECRET {secret} (TYPE postgres, HOST {sql_literal(c.host)}, "
@@ -71,7 +82,7 @@ class PostgresSource:
                 f"PASSWORD {sql_literal(password)})"
             )
         except duckdb.Error:
-            raise SourceUnavailable(f"no se pudo crear el secreto de la fuente {self.id!r}") from None
+            raise _Failure("could not create the secret for source {source}", source=repr(self.id)) from None
         conn.execute(
             f"ATTACH {sql_literal(f'connect_timeout={c.connect_timeout_s}')} AS {sql_ident(self.id)} "
             f"(TYPE postgres, SECRET {secret}, READ_ONLY)"
@@ -82,20 +93,20 @@ class PostgresSource:
             if self._conn is not None:
                 return self._conn
             if time.monotonic() - self._failed_at < _RETRY_AFTER_S:
-                raise SourceUnavailable(self._last_error)
+                raise SourceUnavailable(tr(self._last_error.msgid, **self._last_error.params))
             try:
                 self._conn = new_duckdb(
                     allowed_dirs=[], memory_limit=self._s.duckdb_memory_limit,
                     threads=self._s.duckdb_threads, setup=self._setup,
                 )
-            except (duckdb.Error, SourceUnavailable) as e:
-                # El detalle de DuckDB incluye host/usuario (nunca la contraseña: va en el secreto);
-                # se registra en el servidor y al cliente solo llega un mensaje genérico.
-                log.warning("fuente %s: no se pudo conectar: %s", self.id, e)
+            except (duckdb.Error, _Failure) as e:
+                # DuckDB's detail includes host/user (never the password: it lives in the secret);
+                # it is logged on the server and the client only gets a generic message.
+                log.warning("source %s: could not connect: %s", self.id, e)
                 self._failed_at = time.monotonic()
-                self._last_error = (str(e) if isinstance(e, SourceUnavailable)
-                                    else f"no se pudo conectar a la fuente {self.id!r}")
-                raise SourceUnavailable(self._last_error) from None
+                generic = _Failure("could not connect to source {source}", source=repr(self.id))
+                self._last_error = e if isinstance(e, _Failure) else generic
+                raise SourceUnavailable(tr(self._last_error.msgid, **self._last_error.params)) from None
             return self._conn
 
     def _cursor(self) -> duckdb.DuckDBPyConnection:
@@ -109,7 +120,7 @@ class PostgresSource:
                 self._conn.close()
                 self._conn = None
 
-    # -- catálogo -------------------------------------------------------------------
+    # -- catalog --------------------------------------------------------------------
 
     def catalog(self) -> list[TableInfo]:
         cur = self._cursor()
@@ -135,7 +146,7 @@ class PostgresSource:
         return TableInfo(
             name=name,
             columns=tuple(ColumnInfo(c, t, meta.columns.get(c, "")) for c, t in cols),
-            row_count=None,  # contar en remoto es caro
+            row_count=None,  # counting remotely is expensive
             description=meta.description,
         )
 
@@ -143,15 +154,15 @@ class PostgresSource:
         for t in self.catalog():
             if t.name == name:
                 return t
-        raise NotFound(f"tabla desconocida: {name!r}")
+        raise NotFound(tr("unknown table: {name}", name=repr(name)))
 
     def relation(self, name: str) -> tuple[str, ...]:
         schema, sep, table = name.partition(".")
         if not sep or schema not in self._cfg.schemas or not table:
-            raise NotFound(f"tabla desconocida: {name!r}")
+            raise NotFound(tr("unknown table: {name}", name=repr(name)))
         return (self.id, schema, table)
 
-    # -- consultas ------------------------------------------------------------------
+    # -- queries --------------------------------------------------------------------
 
     def execute(
         self,
@@ -187,6 +198,6 @@ class PostgresSource:
             cur.interrupt()
 
     def _lost(self, e: duckdb.Error) -> SourceUnavailable:
-        log.warning("fuente %s: error de conexión: %s", self.id, e)
-        self.close()  # la próxima petición reconecta
-        return SourceUnavailable(f"se perdió la conexión con la fuente {self.id!r}")
+        log.warning("source %s: connection error: %s", self.id, e)
+        self.close()  # the next request reconnects
+        return SourceUnavailable(tr("lost the connection to source {source}", source=repr(self.id)))

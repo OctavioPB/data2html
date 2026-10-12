@@ -1,4 +1,4 @@
-"""Modelos semánticos en `content/semantic/<nombre>.yaml` (versionables en git)."""
+"""Semantic models in `content/semantic/<name>.yaml` (versionable in git)."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from pydantic import ValidationError
 
 from data2html.spec import SemanticModel
 
-_HEADER = "# Modelo semántico (data2html). Las medidas se definen aquí una sola vez.\n"
+_HEADER = "# Semantic model (data2html). Measures are defined here, once.\n"
 
 
 class ModelNotFound(LookupError):
@@ -24,11 +24,11 @@ class ModelStore:
         self._lock = threading.Lock()
 
     def _path(self, name: str) -> Path:
-        # `name` ya cumple Ident (^[a-z][a-z0-9_]*$): no puede salir del directorio
+        # `name` already matches Ident (^[a-z][a-z0-9_]*$): it cannot escape the directory
         return self._dir / f"{name}.yaml"
 
     def list(self) -> tuple[list[SemanticModel], dict[str, str]]:
-        """Modelos válidos y, aparte, archivos que no validan (nombre de archivo → error)."""
+        """Valid models and, separately, files that do not validate (file name → error)."""
         models: list[SemanticModel] = []
         broken: dict[str, str] = {}
         if not self._dir.exists():

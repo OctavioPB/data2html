@@ -1,4 +1,4 @@
-"""Resultado del perfilado EDA. Solo agregados: el navegador nunca recibe filas crudas."""
+"""EDA profiling result. Aggregates only: the browser never receives raw rows."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ class ProfileWarning(_M):
 
 
 class ProfileOptions(_M):
-    """Umbrales de los avisos. Los defaults vienen de la skill eda-profiling."""
+    """Warning thresholds. The defaults come from the eda-profiling skill."""
 
     sample_rows: Annotated[int, Field(ge=1000, le=1_000_000)] = 100_000
     top_n: Annotated[int, Field(ge=1, le=100)] = 20
@@ -81,9 +81,9 @@ class ColumnProfile(_M):
     nulls: int
     null_ratio: float
     distinct: int
-    distinct_ratio: float  # sobre no nulos
-    # numéricas
-    min: float | str | None = None  # str para temporales
+    distinct_ratio: float  # over non-null values
+    # numeric
+    min: float | str | None = None  # str for temporal columns
     max: float | str | None = None
     mean: float | None = None
     std: float | None = None
@@ -92,20 +92,20 @@ class ColumnProfile(_M):
     q3: float | None = None
     histogram: list[Bin] | None = None
     outliers: Outliers | None = None
-    # texto / booleano
+    # text / boolean
     min_length: int | None = None
     max_length: int | None = None
     top: list[ValueCount] | None = None
     other_count: int | None = None
-    # temporales
+    # temporal
     period_unit: Literal["year", "month", "day", "hour"] | None = None
     periods: list[PeriodCount] | None = None
-    warnings: list[ProfileWarning]  # sin default: siempre presente en la respuesta
+    warnings: list[ProfileWarning]  # no default: always present in the response
 
 
 class Correlations(_M):
     columns: list[str]
-    n: int  # filas de la muestra usada
+    n: int  # rows of the sample used
     pearson: list[list[float | None]]
     spearman: list[list[float | None]]
 
@@ -113,9 +113,9 @@ class Correlations(_M):
 class TableProfile(_M):
     source: str
     table: str
-    rows: int  # filas perfiladas
+    rows: int  # profiled rows
     sampled: bool
-    sample_size: int | None  # tamaño pedido de la muestra, si hubo
+    sample_size: int | None  # requested sample size, if any
     columns: list[ColumnProfile]
     correlations: Correlations | None
     elapsed_ms: int

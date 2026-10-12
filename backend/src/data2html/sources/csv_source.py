@@ -1,8 +1,8 @@
-"""Fuente CSV (modo Import): subida → revisión de tipos por el autor → Parquet en `data/csv/`.
+"""CSV source (Import mode): upload → type review by the author → Parquet in `data/csv/`.
 
-Flujo: `stage()` guarda el archivo subido, `preview()` sugiere tipos y avisa de trampas
-(ceros a la izquierda, coma decimal, fechas ambiguas, encabezados repetidos, codificación),
-`confirm()` convierte con los tipos que el autor revisó y guarda `<tabla>.schema.json` al lado.
+Flow: `stage()` stores the uploaded file, `preview()` suggests types and warns about traps
+(leading zeros, decimal comma, ambiguous dates, repeated headers, encoding), and `confirm()`
+converts with the types the author reviewed and writes `<table>.schema.json` next to the Parquet.
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ import duckdb
 import pyarrow as pa
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from data2html.i18n import tr
 from data2html.settings import Settings
 from data2html.sources.base import ColumnInfo, Identity, TableInfo
 from data2html.sources.catalog_meta import CatalogMeta
@@ -37,7 +38,7 @@ SAMPLE_ROWS = 10_000
 PREVIEW_ROWS = 20
 
 
-# ------------------------------------------------------------------ contrato de la API
+# ------------------------------------------------------------------ API contract
 
 
 class CsvType(StrEnum):
@@ -67,9 +68,9 @@ class ColumnChoice(BaseModel):
     @model_validator(mode="after")
     def _options_match_type(self) -> ColumnChoice:
         if self.date_format and self.type not in (CsvType.DATE, CsvType.TIMESTAMP):
-            raise ValueError(f"{self.name}: date_format solo aplica a DATE/TIMESTAMP")
+            raise ValueError(tr("{column}: date_format only applies to DATE/TIMESTAMP", column=self.name))
         if self.decimal_comma and self.type is not CsvType.DOUBLE:
-            raise ValueError(f"{self.name}: decimal_comma solo aplica a DOUBLE")
+            raise ValueError(tr("{column}: decimal_comma only applies to DOUBLE", column=self.name))
         return self
 
 
@@ -96,7 +97,7 @@ class ConfirmRequest(BaseModel):
     columns: list[ColumnChoice]
 
 
-# ------------------------------------------------------------------ inferencia (pura, testeable)
+# ------------------------------------------------------------------ inference (pure, testable)
 
 _INT = re.compile(r"^[+-]?\d+$")
 _DEC_DOT = re.compile(r"^[+-]?(\d+\.\d*|\.\d+)$")
@@ -115,7 +116,7 @@ def _has_leading_zero(v: str) -> bool:
 def guess_column(name: str, values: list[str | None]) -> ColumnGuess:
     vals = [v.strip() for v in values if v is not None and v.strip()]
     if not vals:
-        return ColumnGuess(name=name, type=CsvType.VARCHAR, warnings=["columna vacía en la muestra"])
+        return ColumnGuess(name=name, type=CsvType.VARCHAR, warnings=[tr("empty column in the sample")])
 
     if all(v.lower() in _BOOL for v in vals):
         return ColumnGuess(name=name, type=CsvType.BOOLEAN)
@@ -124,10 +125,11 @@ def guess_column(name: str, values: list[str | None]) -> ColumnGuess:
         zeros = next((v for v in vals if _has_leading_zero(v)), None)
         if zeros is not None:
             return ColumnGuess(name=name, type=CsvType.VARCHAR, warnings=[
-                f"ceros a la izquierda ('{zeros}'): se deja como texto para no perderlos",
+                tr("leading zeros ('{sample}'): kept as text so they are not lost", sample=zeros),
             ])
         if any(len(v.lstrip("+-")) > 18 for v in vals):
-            return ColumnGuess(name=name, type=CsvType.VARCHAR, warnings=["entero demasiado largo: texto"])
+            return ColumnGuess(name=name, type=CsvType.VARCHAR,
+                               warnings=[tr("integer too long: kept as text")])
         return ColumnGuess(name=name, type=CsvType.BIGINT)
 
     if all(_INT.match(v) or _DEC_DOT.match(v) for v in vals):
@@ -136,7 +138,8 @@ def guess_column(name: str, values: list[str | None]) -> ColumnGuess:
     if all(_INT.match(v) or _DEC_COMMA.match(v) for v in vals):
         sample = next(v for v in vals if "," in v)
         return ColumnGuess(name=name, type=CsvType.DOUBLE, decimal_comma=True, warnings=[
-            f"coma decimal detectada ('{sample}'); el punto se toma como separador de miles",
+            tr("decimal comma detected ('{sample}'); the dot is taken as the thousands separator",
+               sample=sample),
         ])
 
     if all(_ISO_DATE.match(v) for v in vals):
@@ -153,13 +156,15 @@ def guess_column(name: str, values: list[str | None]) -> ColumnGuess:
         day_first = {"/": DateFormat.dmy_slash, "-": DateFormat.dmy_dash}[sep]
         month_first = {"/": DateFormat.mdy_slash, "-": DateFormat.mdy_dash}[sep]
         if any(f > 12 for f in firsts) and any(s > 12 for s in seconds):
-            return ColumnGuess(name=name, type=CsvType.VARCHAR, warnings=["fechas con orden inconsistente"])
+            return ColumnGuess(name=name, type=CsvType.VARCHAR,
+                               warnings=[tr("dates with inconsistent order")])
         if any(f > 12 for f in firsts):
             return ColumnGuess(name=name, type=CsvType.DATE, date_format=day_first)
         if any(s > 12 for s in seconds):
             return ColumnGuess(name=name, type=CsvType.DATE, date_format=month_first)
         return ColumnGuess(name=name, type=CsvType.DATE, date_format=day_first, warnings=[
-            f"fecha ambigua ('{vals[0]}'): se asume día/mes; cámbialo si es mes/día",
+            tr("ambiguous date ('{sample}'): day/month assumed; change it if it is month/day",
+               sample=vals[0]),
         ])
 
     return ColumnGuess(name=name, type=CsvType.VARCHAR)
@@ -167,7 +172,7 @@ def guess_column(name: str, values: list[str | None]) -> ColumnGuess:
 
 def suggest_table_name(filename: str) -> str:
     stem = Path(filename).stem.lower()
-    slug = re.sub(r"[^a-z0-9_]+", "_", stem).strip("_") or "tabla"
+    slug = re.sub(r"[^a-z0-9_]+", "_", stem).strip("_") or "table"
     if slug[0].isdigit():
         slug = "t_" + slug
     return slug[:63]
@@ -180,7 +185,7 @@ def cast_expr(choice: ColumnChoice) -> str:
     v = f"NULLIF(trim({col}), '')"
     if choice.decimal_comma:
         v = f"replace(replace({v}, '.', ''), ',', '.')"
-    if choice.date_format:  # de una lista cerrada (DateFormat): seguro como literal
+    if choice.date_format:  # from a closed list (DateFormat): safe as a literal
         v = f"strptime({v}, {sql_literal(choice.date_format.value)})"
     return f"CAST({v} AS {choice.type.value}) AS {col}"
 
@@ -197,11 +202,11 @@ def _detect_encoding(path: Path) -> str:
     return "utf-8"
 
 
-# ------------------------------------------------------------------ la fuente
+# ------------------------------------------------------------------ the source
 
 
 class CsvSource:
-    """Tablas Parquet nacidas de CSV. Las consultas corren en un DuckDB que solo ve `csv_dir`."""
+    """Parquet tables born from CSV files. Queries run in a DuckDB that can only see `csv_dir`."""
 
     id = "csv"
     kind = "csv"
@@ -222,13 +227,13 @@ class CsvSource:
 
     def _parquet(self, table: str) -> Path:
         if not TABLE_RE.match(table):
-            raise SourceError(f"nombre de tabla inválido: {table!r}")
+            raise SourceError(tr("invalid table name: {name}", name=repr(table)))
         return self._s.csv_dir / f"{table}.parquet"
 
     def tables(self) -> list[str]:
         return sorted(p.stem for p in self._s.csv_dir.glob("*.parquet") if TABLE_RE.match(p.stem))
 
-    # -- subida ----------------------------------------------------------------
+    # -- upload ------------------------------------------------------------------
 
     def stage(self, src: BinaryIO, filename: str) -> str:
         upload_id = uuid.uuid4().hex
@@ -241,11 +246,11 @@ class CsvSource:
                 if written > limit:
                     out.close()
                     dest.unlink()
-                    raise TooLarge(f"el archivo supera {self._s.max_upload_mb} MB")
+                    raise TooLarge(tr("the file exceeds {mb} MB", mb=self._s.max_upload_mb))
                 out.write(chunk)
         if written == 0:
             dest.unlink()
-            raise SourceError("el archivo está vacío")
+            raise SourceError(tr("the file is empty"))
         (self._s.uploads_dir / f"{upload_id}.json").write_text(
             json.dumps({"filename": Path(filename).name}), encoding="utf-8"
         )
@@ -253,23 +258,23 @@ class CsvSource:
 
     def _upload(self, upload_id: str) -> tuple[Path, str]:
         if not _UPLOAD_ID_RE.match(upload_id):
-            raise NotFound("subida desconocida")
+            raise NotFound(tr("unknown upload"))
         path = self._s.uploads_dir / f"{upload_id}.csv"
         meta = self._s.uploads_dir / f"{upload_id}.json"
         if not path.exists() or not meta.exists():
-            raise NotFound("subida desconocida o expirada")
+            raise NotFound(tr("unknown or expired upload"))
         return path, str(json.loads(meta.read_text(encoding="utf-8"))["filename"])
 
     def _read_raw(
         self, conn: duckdb.DuckDBPyConnection, path: Path, encoding: str
     ) -> tuple[str, bool, str]:
-        """Devuelve (delimitador, tiene encabezado, SQL de lectura todo-VARCHAR)."""
+        """Return (delimiter, has header, all-VARCHAR read SQL)."""
         try:
             delim, header = conn.execute(
                 "SELECT Delimiter, HasHeader FROM sniff_csv(?, encoding := ?)", [str(path), encoding]
             ).fetchone() or (",", True)
         except duckdb.Error as e:
-            raise SourceError(f"no se pudo leer el CSV: {e}") from e
+            raise SourceError(tr("could not read the CSV: {error}", error=e)) from e
         reader = (
             f"read_csv({sql_literal(str(path))}, all_varchar = true, header = {str(bool(header)).lower()}, "
             f"delim = {sql_literal(delim)}, encoding = {sql_literal(encoding)})"
@@ -281,14 +286,14 @@ class CsvSource:
         encoding = _detect_encoding(path)
         warnings: list[str] = []
         if encoding != "utf-8":
-            warnings.append("el archivo no es UTF-8: se leyó como Latin-1 (Excel en español suele serlo)")
+            warnings.append(tr("the file is not UTF-8: it was read as Latin-1 (Excel exports often are)"))
         conn = self._conn(self._s.uploads_dir)
         try:
             delim, header, reader = self._read_raw(conn, path, encoding)
             try:
-                sample = conn.execute(f"SELECT * FROM {reader} LIMIT {SAMPLE_ROWS}").to_arrow_table()  # noqa: S608 (reader: rutas y opciones del servidor)
+                sample = conn.execute(f"SELECT * FROM {reader} LIMIT {SAMPLE_ROWS}").to_arrow_table()  # noqa: S608 (reader: server paths and options)
             except duckdb.Error as e:
-                raise SourceError(f"no se pudo leer el CSV: {e}") from e
+                raise SourceError(tr("could not read the CSV: {error}", error=e)) from e
         finally:
             conn.close()
 
@@ -297,7 +302,7 @@ class CsvSource:
                 first = next(csv.reader(io.StringIO(f.readline()), delimiter=delim), [])
             dupes = sorted({h for h in first if first.count(h) > 1})
             if dupes:
-                warnings.append(f"encabezados repetidos {dupes}: se renombraron con sufijo _1, _2…")
+                warnings.append(tr("repeated headers {names}: renamed with suffixes _1, _2…", names=dupes))
 
         columns = [guess_column(n, sample.column(n).to_pylist()) for n in sample.column_names]
         head = sample.slice(0, PREVIEW_ROWS).to_pylist()
@@ -311,7 +316,7 @@ class CsvSource:
         path, filename = self._upload(req.upload_id)
         target = self._parquet(req.table)
         if target.exists():
-            raise Conflict(f"la tabla {req.table!r} ya existe")
+            raise Conflict(tr("table {name} already exists", name=repr(req.table)))
         encoding = _detect_encoding(path)
         tmp = target.with_suffix(".parquet.tmp")
         conn = self._conn(self._s.uploads_dir, self._s.csv_dir)
@@ -319,14 +324,14 @@ class CsvSource:
             delim, _, reader = self._read_raw(conn, path, encoding)
             names = [r[0] for r in conn.execute(f"DESCRIBE SELECT * FROM {reader}").fetchall()]  # noqa: S608
             if [c.name for c in req.columns] != names:
-                raise SourceError(f"las columnas no coinciden con el archivo: {names}")
-            # COPY no acepta parámetros: columnas citadas, tipos y formatos de listas cerradas, rutas propias
+                raise SourceError(tr("the columns do not match the file: {names}", names=names))
+            # COPY takes no parameters: quoted columns, types and formats from closed lists, our own paths
             select = ", ".join(cast_expr(c) for c in req.columns)
             copy = f"COPY (SELECT {select} FROM {reader}) TO {sql_literal(str(tmp))} (FORMAT parquet)"  # noqa: S608
             try:
                 conn.execute(copy)
             except duckdb.ConversionException as e:
-                raise SourceError(f"no se pudo convertir con los tipos elegidos: {e}") from e
+                raise SourceError(tr("could not convert with the chosen types: {error}", error=e)) from e
         finally:
             conn.close()
         os.replace(tmp, target)
@@ -352,7 +357,7 @@ class CsvSource:
     def table_info(self, table: str) -> TableInfo:
         parquet = self._parquet(table)
         if not parquet.exists():
-            raise NotFound(f"tabla desconocida: {table!r}")
+            raise NotFound(tr("unknown table: {name}", name=repr(table)))
         meta = self._meta.get(self.id, table)
         conn = self._conn(self._s.csv_dir)
         try:
@@ -371,8 +376,8 @@ class CsvSource:
         return [self.table_info(t) for t in self.tables()]
 
     def relation(self, name: str) -> tuple[str, ...]:
-        self._parquet(name)  # valida el nombre
-        return (name,)  # execute() crea una vista por tabla
+        self._parquet(name)  # validates the name
+        return (name,)  # execute() creates one view per table
 
     def execute(
         self,
@@ -386,7 +391,7 @@ class CsvSource:
         ensure_single_select(sql, self.dialect)
         qid = query_id or uuid.uuid4().hex
         conn = self._conn(self._s.csv_dir)
-        for t in self.tables():  # CREATE VIEW no acepta parámetros; t ya pasó TABLE_RE
+        for t in self.tables():  # CREATE VIEW takes no parameters; t already passed TABLE_RE
             path = sql_literal(str(self._parquet(t)))
             conn.execute(f"CREATE VIEW {sql_ident(t)} AS SELECT * FROM read_parquet({path})")  # noqa: S608
         with self._lock:
@@ -407,4 +412,3 @@ class CsvSource:
             conn = self._running.get(query_id)
         if conn is not None:
             conn.interrupt()
-

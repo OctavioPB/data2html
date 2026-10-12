@@ -1,8 +1,8 @@
-"""Explorador tipo Excel: orden, filtros, búsqueda y columnas calculadas → un SELECT paginado.
+"""Excel-like explorer: sort, filters, search and computed columns → one paginated SELECT.
 
-Todo se arma con expresiones SQLGlot; los valores del usuario viajan como parámetros (`$p0`…) y los
-nombres de columna se validan contra el catálogo. Las columnas calculadas son expresiones escalares
-revisadas por `parse_computed` (sin subconsultas, agregados, ventanas ni funciones desconocidas).
+Everything is built with SQLGlot expressions; user values travel as parameters (`$p0`…) and column
+names are checked against the catalog. Computed columns are scalar expressions reviewed by
+`parse_computed` (no subqueries, aggregates, windows or unknown functions).
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ from typing import Annotated, Self
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlglot import exp
 
+from data2html.i18n import tr
 from data2html.spec.expr import ExpressionError, parse_expression
 
 MAX_LIMIT = 1000
@@ -26,7 +27,7 @@ class InvalidExplore(ValueError):
     pass
 
 
-# ------------------------------------------------------------------ petición
+# ------------------------------------------------------------------ request
 
 
 class ExploreOp(StrEnum):
@@ -67,15 +68,15 @@ class ColumnFilter(_Strict):
         v = self.value
         if self.op in _NO_VALUE:
             if v is not None:
-                raise ValueError(f"{self.op.value} no lleva valor")
+                raise ValueError(tr("{op} takes no value", op=self.op.value))
         elif self.op is ExploreOp.between:
             if not (isinstance(v, list) and len(v) == 2):
-                raise ValueError("between espera [desde, hasta]")
+                raise ValueError(tr("between expects [from, to]"))
         elif self.op is ExploreOp.in_:
             if not (isinstance(v, list) and v):
-                raise ValueError("in espera una lista no vacía")
+                raise ValueError(tr("in expects a non-empty list"))
         elif v is None or isinstance(v, list):
-            raise ValueError(f"{self.op.value} espera un solo valor")
+            raise ValueError(tr("'{op}' expects a single value", op=self.op.value))
         return self
 
 
@@ -91,20 +92,20 @@ class ExploreRequest(_Strict):
 class ComputedColumn(_Strict):
     name: Annotated[str, Field(pattern=NAME_PATTERN)]
     expr: Annotated[str, Field(min_length=1, max_length=2000)]
-    type: str = ""  # tipo DuckDB resuelto al guardarla; vacío mientras se valida
+    type: str = ""  # DuckDB type resolved when saved; empty while it is being validated
 
 
-# ------------------------------------------------------------------ columnas calculadas
+# ------------------------------------------------------------------ computed columns
 
 def parse_computed(expr: str, columns: set[str]) -> exp.Expr:
-    """Expresión escalar (por fila) sobre columnas existentes, o `InvalidExplore` con el motivo."""
+    """Scalar (per-row) expression over existing columns, or `InvalidExplore` with the reason."""
     try:
         tree, used = parse_expression(expr, aggregate=False)
     except ExpressionError as e:
         raise InvalidExplore(str(e)) from e
     unknown = sorted(used - columns)
     if unknown:
-        raise InvalidExplore(f"columna desconocida: {unknown[0]}")
+        raise InvalidExplore(tr("unknown column: {name}", name=unknown[0]))
     return tree
 
 
@@ -124,7 +125,7 @@ def _col(name: str) -> exp.Column:
 
 def _table(relation: tuple[str, ...]) -> exp.Table:
     if not 1 <= len(relation) <= 3:
-        raise InvalidExplore(f"relación inválida: {relation!r}")
+        raise InvalidExplore(tr("invalid relation: {relation}", relation=repr(relation)))
     *qual, name = (exp.to_identifier(p, quoted=True) for p in relation)
     catalog, db = ([None, None] + qual)[-2:]
     return exp.Table(this=name, db=db, catalog=catalog)
@@ -145,7 +146,7 @@ class _Params:
 
 
 def _typed(param: exp.Expr, type_: str) -> exp.Expr:
-    # El parámetro llega como texto/número JSON: se castea al tipo de la columna (tipo del servidor).
+    # The parameter arrives as JSON text/number: cast it to the column's (server-side) type.
     return exp.cast(param, exp.DataType.build(type_, dialect="duckdb")) if type_ else param
 
 
@@ -180,12 +181,13 @@ def _filter(f: ColumnFilter, type_: str, p: _Params) -> exp.Expr:
 def base_select(
     relation: tuple[str, ...], columns: dict[str, str], computed: list[ComputedColumn]
 ) -> tuple[exp.Select, dict[str, str]]:
-    """`SELECT *, <calculadas> FROM relation` y los tipos de todas sus columnas."""
+    """`SELECT *, <computed> FROM relation` and the types of all its columns."""
     types = dict(columns)
     projections: list[exp.Expr] = [exp.Star()]
     for cc in computed:
         if cc.name in types:
-            raise InvalidExplore(f"la columna calculada {cc.name!r} choca con una existente")
+            raise InvalidExplore(tr("computed column {name} clashes with an existing one",
+                                    name=repr(cc.name)))
         projections.append(exp.alias_(parse_computed(cc.expr, set(columns)), cc.name, quoted=True))
         types[cc.name] = cc.type
     return exp.select(*projections).from_(_table(relation)), types
@@ -197,13 +199,13 @@ def build_explore(
     computed: list[ComputedColumn],
     req: ExploreRequest,
 ) -> ExploreSQL:
-    """`relation`: nombre calificado de la tabla (`DataSource.relation`); `columns`: nombre → tipo
-    DuckDB (del catálogo). Devuelve SQL DuckDB parametrizado."""
+    """`relation`: the table's qualified name (`DataSource.relation`); `columns`: name → DuckDB type
+    (from the catalog). Returns parameterized DuckDB SQL."""
     base, types = base_select(relation, columns, computed)
 
     def known(name: str) -> str:
         if name not in types:
-            raise InvalidExplore(f"columna desconocida: {name!r}")
+            raise InvalidExplore(tr("unknown column: {name}", name=repr(name)))
         return types[name]
 
     p = _Params()
@@ -224,8 +226,8 @@ def build_explore(
     for s in req.sort:
         known(s.column)
     if req.sort:
-        # El sort de DuckDB no es estable: sin desempate, las páginas repetirían u omitirían filas.
-        # Sin `sort`, preserve_insertion_order (default) mantiene el orden del archivo.
+        # DuckDB's sort is not stable: without a tiebreak, pages would repeat or skip rows.
+        # Without `sort`, preserve_insertion_order (the default) keeps the file order.
         keys = [exp.Ordered(this=_col(s.column), desc=s.desc) for s in req.sort]
         sorted_cols = {s.column for s in req.sort}
         keys += [exp.Ordered(this=_col(n)) for n in columns if n not in sorted_cols]

@@ -35,7 +35,7 @@
     },
     "Filter": {
       "additionalProperties": false,
-      "description": "Filtro sobre una dimensión. El valor viene de un parámetro del reporte (`param`) o es fijo\n(`value`); exactamente uno de los dos.",
+      "description": "Filter on a dimension. The value comes from a report parameter (`param`) or is fixed\n(`value`); exactly one of the two.",
       "properties": {
         "dimension": {
           "pattern": "^[a-z][a-z0-9_]{0,62}$",
@@ -56,7 +56,7 @@
             }
           ],
           "default": null,
-          "description": "Parámetro del reporte que aporta el valor",
+          "description": "Report parameter that provides the value",
           "title": "Param"
         },
         "value": {
@@ -97,7 +97,7 @@
             }
           ],
           "default": null,
-          "description": "Valor fijo; lista para 'in' y [desde, hasta] para 'between'",
+          "description": "Fixed value; a list for 'in' and [from, to] for 'between'",
           "title": "Value"
         }
       },
@@ -169,7 +169,7 @@
       "additionalProperties": false,
       "properties": {
         "sql": {
-          "description": "Una expresión agregada en dialecto DuckDB sobre columnas de la tabla del modelo, p. ej. SUM(monto_bruto - descuento). Sin subconsultas, ventanas ni funciones desconocidas; toda columna dentro de un agregado.",
+          "description": "One aggregate expression in DuckDB dialect over columns of the model's table, e.g. SUM(gross_amount - discount). No subqueries, windows or unknown functions; every column inside an aggregate.",
           "title": "Sql",
           "type": "string"
         },
@@ -178,7 +178,7 @@
           "default": "number"
         },
         "owner": {
-          "description": "Responsable de la definición",
+          "description": "Who is accountable for the definition",
           "title": "Owner",
           "type": "string"
         },
@@ -234,7 +234,7 @@
           "default": "live"
         },
         "params": {
-          "description": "parámetro → tipo",
+          "description": "parameter → type",
           "patternProperties": {
             "^[a-z][a-z0-9_]{0,62}$": {
               "type": "string"
@@ -262,14 +262,14 @@
     },
     "RlsRule": {
       "additionalProperties": false,
-      "description": "Filtro por fila para fuentes sin RLS nativo: column = valor del claim del lector.",
+      "description": "Row filter for sources without native RLS: column = value of the reader's claim.",
       "properties": {
         "column": {
           "title": "Column",
           "type": "string"
         },
         "claim": {
-          "description": "Atributo de Identity, p. ej. 'groups' o 'email'",
+          "description": "Identity attribute, e.g. 'groups' or 'email'",
           "title": "Claim",
           "type": "string"
         }
@@ -290,7 +290,7 @@
           "type": "string"
         },
         "source": {
-          "description": "Id de conexión registrada (nunca credenciales)",
+          "description": "Id of a registered connection (never credentials)",
           "pattern": "^[a-z][a-z0-9_]{0,62}$",
           "title": "Source",
           "type": "string"
@@ -393,7 +393,7 @@
             }
           ],
           "default": null,
-          "description": "Agrupa una dimensión temporal por periodo (date_trunc)"
+          "description": "Groups a temporal dimension by period (date_trunc)"
         },
         "color": {
           "anyOf": [

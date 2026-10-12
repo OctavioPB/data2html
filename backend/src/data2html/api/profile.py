@@ -1,7 +1,8 @@
-"""Perfil EDA de una tabla, con caché en memoria.
+"""EDA profile of a table, with an in-memory cache.
 
-Las tablas locales (Parquet de CSV) no cambian una vez creadas: su perfil vale hasta que cambien las
-columnas calculadas o se pida `refresh`. Las remotas caducan a los `REMOTE_TTL_S`.
+Local tables (Parquet from CSV) never change once created: their profile holds until the computed
+columns change or `refresh` is requested. Remote ones expire after `REMOTE_TTL_S`. Profiles carry
+localized warning messages, so the request language is part of the cache key.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from fastapi import APIRouter, Query
 
 from data2html import cancel
 from data2html.api.deps import MetaDep, SettingsDep, SourceDep
+from data2html.i18n import get_lang
 from data2html.profiling.models import TableProfile
 from data2html.profiling.profiler import LOCAL_KINDS, profile_table
 
@@ -61,9 +63,9 @@ def get_profile(
     refresh: bool = False,
     query_id: Annotated[str | None, Query(pattern=cancel.QUERY_ID_RE.pattern)] = None,
 ) -> TableProfile:
-    """`query_id` opcional: el studio lo manda para poder cancelar con POST /api/cancel/{query_id}."""
+    """Optional `query_id`: the studio sends it so it can cancel with POST /api/cancel/{query_id}."""
     computed = "|".join(f"{c.name}={c.expr}" for c in meta.get(src.id, table).computed)
-    key = (str(settings.data_dir), src.id, table, computed)
+    key = (str(settings.data_dir), src.id, table, computed, get_lang())
     ttl = None if src.kind in LOCAL_KINDS else REMOTE_TTL_S
     if not refresh and (hit := cache.get(key, ttl)) is not None:
         return hit

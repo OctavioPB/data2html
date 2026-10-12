@@ -1,4 +1,4 @@
-"""Explorador tipo Excel: una página de filas por petición, nunca la tabla completa."""
+"""Excel-like explorer: one page of rows per request, never the whole table."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from sqlglot import exp
 
 from data2html.api.deps import MetaDep, SettingsDep, SourceDep
 from data2html.api.schemas import Cell, ExploreColumn, ExplorePage
+from data2html.i18n import tr
 from data2html.sources.base import DataSource
 from data2html.sources.catalog_meta import CatalogMeta
 from data2html.sqlgen.explore import ComputedColumn, ExploreRequest, InvalidExplore, build_explore
@@ -22,7 +23,7 @@ _JS_SAFE_INT = 2**53 - 1
 
 
 def to_cell(v: object) -> Cell:
-    """Valor Arrow → celda JSON. Enteros fuera del rango seguro de JS viajan como texto."""
+    """Arrow value → JSON cell. Integers outside the JS safe range travel as text."""
     if v is None or isinstance(v, str | bool | float):
         return v
     if isinstance(v, int):
@@ -32,7 +33,7 @@ def to_cell(v: object) -> Cell:
     if isinstance(v, dt.date | dt.datetime | dt.time):
         return v.isoformat()
     if isinstance(v, bytes):
-        return f"<binario, {len(v)} bytes>"
+        return tr("<binary, {n} bytes>", n=len(v))
     if isinstance(v, list | dict):
         return json.dumps(v, default=str, ensure_ascii=False)
     return str(v)
@@ -66,10 +67,10 @@ def run_explore(
 def resolve_computed(
     src: DataSource, meta: CatalogMeta, table: str, col: ComputedColumn, timeout_s: int
 ) -> ComputedColumn:
-    """Valida la expresión ejecutándola sobre una fila y devuelve la columna con su tipo DuckDB."""
+    """Validate the expression by running it over one row; return the column with its DuckDB type."""
     info = src.table_info(table)
     if col.name in {c.name for c in info.columns}:
-        raise InvalidExplore(f"ya existe una columna {col.name!r}")
+        raise InvalidExplore(tr("a column {name} already exists", name=repr(col.name)))
     others = [c for c in meta.get(src.id, table).computed if c.name != col.name]
     q = build_explore(src.relation(table), {c.name: c.type for c in info.columns}, [*others, col],
                       ExploreRequest(limit=1, with_total=False))

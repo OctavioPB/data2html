@@ -69,7 +69,7 @@ def test_store_roundtrip(settings):
     store.put(m)
     assert store.get("ventas") == m
     text = (settings.semantic_dir / "ventas.yaml").read_text(encoding="utf-8")
-    assert text.startswith("# Modelo semántico") and "venta_neta" in text
+    assert text.startswith("# Semantic model") and "venta_neta" in text
     (settings.semantic_dir / "roto.yaml").write_text("name: Roto\n", encoding="utf-8")
     models, broken = store.list()
     assert [x.name for x in models] == ["ventas"] and "roto.yaml" in broken
@@ -78,7 +78,7 @@ def test_store_roundtrip(settings):
         store.get("ventas")
 
 
-# ------------------------------------------------------------------ check contra el catálogo
+# ------------------------------------------------------------------ check against the catalog
 
 
 def test_check_ok(csv_src):
@@ -91,21 +91,21 @@ def test_check_finds_problems(csv_src):
         "measures": MODEL["measures"]
         | {
             "fantasma": {"sql": "SUM(no_existe)", "owner": "x", "description": "x"},
-            "texto": {"sql": "SUM(region)", "owner": "x", "description": "x"},  # tipos: falla al ejecutar
+            "texto": {"sql": "SUM(region)", "owner": "x", "description": "x"},  # types: fails when run
         },
     }
     errors = check_model(SemanticModel.model_validate(bad), csv_src)
     assert any("'pais'" in e for e in errors)
     assert any("fantasma" in e and "no_existe" in e for e in errors)
-    assert any(e.startswith("medida 'texto'") for e in errors)
+    assert any(e.startswith("measure 'texto'") for e in errors)
 
 
 def test_check_unknown_table(csv_src):
     errors = check_model(SemanticModel.model_validate(MODEL | {"table": "otra"}), csv_src)
-    assert errors == ["la tabla 'otra' no existe en la fuente 'csv'"]
+    assert errors == ["table 'otra' does not exist in source 'csv'"]
 
 
-# ------------------------------------------------------------------ promover desde el editor SQL
+# ------------------------------------------------------------------ promote from the SQL editor
 
 TABLES = {
     "ventas": {
@@ -144,7 +144,7 @@ def test_suggest_reuses_existing_model_names():
         models=[model],
     )
     assert s.model == "ventas"
-    assert (s.measure_name, s.measure_exists) == ("venta_neta", True)  # misma medida aunque cambie el formato
+    assert (s.measure_name, s.measure_exists) == ("venta_neta", True)  # same measure, other format
     assert (s.dimension.name, s.dimension.exists, s.dimension.type) == ("fecha", True, "temporal")
     assert any("WHERE" in w for w in s.warnings)
 
@@ -159,12 +159,12 @@ def test_suggest_kpi_without_dimension():
     [
         ("SELECT region, SUM(monto) FROM ventas v JOIN otra o USING (region) GROUP BY 1", "joins"),
         ("WITH t AS (SELECT * FROM ventas) SELECT SUM(monto) FROM t", "CTE"),
-        ("SELECT region, SUM(monto), COUNT(*) FROM ventas GROUP BY 1", "exactamente un agregado"),
-        ("SELECT region, canal, SUM(monto) FROM ventas GROUP BY 1, 2", "una dimensión"),
-        ("SELECT region FROM ventas", "exactamente un agregado"),
-        ("SELECT SUM(monto) FROM otra", "catálogo"),
+        ("SELECT region, SUM(monto), COUNT(*) FROM ventas GROUP BY 1", "exactly one aggregate"),
+        ("SELECT region, canal, SUM(monto) FROM ventas GROUP BY 1, 2", "at most one dimension"),
+        ("SELECT region FROM ventas", "exactly one aggregate"),
+        ("SELECT SUM(monto) FROM otra", "catalog"),
         ("SELECT SUM(monto) FROM ventas UNION ALL SELECT 1", "UNION"),
-        ("SELECT upper(region), SUM(monto) FROM ventas GROUP BY 1", "ni agregado"),
+        ("SELECT upper(region), SUM(monto) FROM ventas GROUP BY 1", "neither a dimension nor an aggregate"),
         ("DELETE FROM ventas", "SELECT"),
     ],
 )
@@ -195,12 +195,12 @@ def test_api_model_lifecycle(client, settings):
     assert [e["model"]["name"] for e in listing["models"]] == ["ventas"] and listing["models"][0][
         "errors"
     ] == []
-    assert client.put("/api/semantic/otro", json=MODEL).status_code == 422  # nombre no coincide
+    assert client.put("/api/semantic/otro", json=MODEL).status_code == 422  # name does not match
     bad = MODEL | {"measures": {"m": {"sql": "SUM(no_existe)", "owner": "x", "description": "x"}}}
     r = client.put("/api/semantic/ventas", json=bad)
     assert r.status_code == 422 and "no_existe" in r.json()["detail"]
     bad_shape = MODEL | {"measures": {"m": {"sql": "monto", "owner": "x", "description": "x"}}}
-    assert client.put("/api/semantic/ventas", json=bad_shape).status_code == 422  # el contrato lo rechaza
+    assert client.put("/api/semantic/ventas", json=bad_shape).status_code == 422  # the contract rejects it
     assert client.delete("/api/semantic/ventas").status_code == 204
     assert client.get("/api/semantic/ventas").status_code == 404
 
@@ -236,7 +236,7 @@ def test_api_visual_query(client):
         "/api/visual/query",
         json={"model": "ventas", "visual": {"mark": "line", "measure": "venta_neta", "dimension": "region"}},
     )
-    assert bad.status_code == 422 and "no compatible" in bad.json()["detail"]
+    assert bad.status_code == 422 and "not compatible" in bad.json()["detail"]
     assert (
         client.post(
             "/api/visual/query", json={"model": "nope", "visual": {"mark": "kpi", "measure": "venta_neta"}}
@@ -252,4 +252,4 @@ def test_api_suggest(client):
     )
     assert r.status_code == 200 and r.json()["measure_name"] == "bruto"
     r = client.post("/api/semantic/suggest", json={"source": "csv", "sql": "SELECT * FROM ventas"})
-    assert r.status_code == 422 and "no se puede promover" in r.json()["detail"]
+    assert r.status_code == 422 and "cannot be promoted" in r.json()["detail"]

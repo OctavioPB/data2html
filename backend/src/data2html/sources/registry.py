@@ -1,7 +1,7 @@
-"""Registro de fuentes: CSV (siempre) + conexiones declaradas en `config/sources.yaml`.
+"""Source registry: CSV (always) + connections declared in `config/sources.yaml`.
 
-El YAML solo lleva NOMBRES de variables de entorno para los secretos. Un campo `password:` (o
-cualquier campo desconocido) es un error de validación, no se ignora.
+The YAML only holds the NAMES of environment variables for secrets. A `password:` field (or any
+unknown field) is a validation error, not something to ignore.
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ from typing import Annotated, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
+from data2html.i18n import tr
 from data2html.settings import Settings
 from data2html.sources.base import DataSource
 from data2html.sources.catalog_meta import CatalogMeta
@@ -47,7 +48,7 @@ def load_sources_file(path: Path | None) -> SourcesFile:
         return SourcesFile()
     data = SourcesFile.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")) or {})
     if "csv" in data.sources:
-        raise ValueError("'csv' es un id reservado para la fuente de archivos subidos")
+        raise ValueError(tr("'csv' is a reserved id for the uploaded-files source"))
     return data
 
 
@@ -58,7 +59,7 @@ class SourceRegistry:
 
     @classmethod
     def load(cls, settings: Settings, meta: CatalogMeta) -> SourceRegistry:
-        from data2html.sources.postgres import PostgresSource  # evita ciclo de imports
+        from data2html.sources.postgres import PostgresSource  # avoids an import cycle
 
         cfg = load_sources_file(settings.sources_file)
         others: list[DataSource] = [PostgresSource(sid, c, settings, meta) for sid, c in cfg.sources.items()]
@@ -68,7 +69,7 @@ class SourceRegistry:
         try:
             return self._by_id[source_id]
         except KeyError:
-            raise NotFound(f"fuente desconocida: {source_id!r}") from None
+            raise NotFound(tr("unknown source: {name}", name=repr(source_id))) from None
 
     def all(self) -> list[DataSource]:
         return list(self._by_id.values())

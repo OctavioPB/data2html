@@ -39,6 +39,9 @@ target-version = "py312"
 select = ["E", "F", "I", "B", "UP", "S", "SIM"]
 ignore = ["S101"]
 
+[tool.ruff.lint.per-file-ignores]
+"src/data2html/locales/*.py" = ["E501"]  # one message per line, however long
+
 [tool.mypy]
 python_version = "3.12"
 plugins = ["pydantic.mypy"]

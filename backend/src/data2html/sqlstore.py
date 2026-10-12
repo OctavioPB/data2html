@@ -1,4 +1,4 @@
-"""Historial y consultas guardadas del editor SQL (studio monousuario), en `data/`."""
+"""SQL editor history and saved queries (single-user studio), in `data/`."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Dependencias compartidas por los routers y traducción de errores a HTTP."""
+"""Dependencies shared by the routers, and translation of errors into HTTP responses."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import duckdb
 from fastapi import Depends, FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
+from data2html.i18n import tr
 from data2html.semantic.store import ModelNotFound
 from data2html.semantic.suggest import NotPromotable
 from data2html.settings import Settings
@@ -59,7 +60,7 @@ RegistryDep = Annotated[SourceRegistry, Depends(get_registry)]
 
 
 def get_source(source: str, registry: RegistryDep) -> DataSource:
-    """Resuelve el parámetro de ruta `{source}`."""
+    """Resolve the `{source}` path parameter."""
     return registry.get(source)
 
 
@@ -72,7 +73,7 @@ SourceDep = Annotated[DataSource, Depends(get_source)]
 CsvDep = Annotated[CsvSource, Depends(get_csv)]
 
 
-# ------------------------------------------------------------------ errores → HTTP
+# ------------------------------------------------------------------ errors → HTTP
 
 _SOURCE_STATUS: list[tuple[type[SourceError], int]] = [
     (NotFound, status.HTTP_404_NOT_FOUND),
@@ -89,7 +90,7 @@ def _json(code: int, detail: str) -> JSONResponse:
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ModelNotFound)
     async def _model(_: Request, e: ModelNotFound) -> JSONResponse:
-        return _json(status.HTTP_404_NOT_FOUND, f"modelo semántico desconocido: {e}")
+        return _json(status.HTTP_404_NOT_FOUND, tr("unknown semantic model: {name}", name=e))
 
     @app.exception_handler(VisualQueryError)
     async def _visual(_: Request, e: VisualQueryError) -> JSONResponse:
@@ -97,7 +98,7 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(NotPromotable)
     async def _promote(_: Request, e: NotPromotable) -> JSONResponse:
-        return _json(status.HTTP_422_UNPROCESSABLE_CONTENT, f"no se puede promover: {e}")
+        return _json(status.HTTP_422_UNPROCESSABLE_CONTENT, tr("cannot be promoted: {reason}", reason=e))
 
     @app.exception_handler(SourceError)
     async def _source(_: Request, e: SourceError) -> JSONResponse:
@@ -121,5 +122,5 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(duckdb.Error)
     async def _duckdb(_: Request, e: duckdb.Error) -> JSONResponse:
-        # Errores de binder/conversión por la consulta del usuario: solo la primera línea
+        # Binder/conversion errors caused by the user's query: first line only
         return _json(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e).split("\n")[0])

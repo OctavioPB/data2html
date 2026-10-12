@@ -36,13 +36,13 @@ def test_loads_postgres(tmp_path):
 
 
 @pytest.mark.parametrize("bad", [
-    {"password": "d2h"},                      # secreto en el YAML: prohibido
-    {"password_env": "pg password"},           # no es un nombre de variable
+    {"password": "d2h"},                      # a secret in the YAML: forbidden
+    {"password_env": "pg password"},           # not a variable name
     {"host": "localhost' OR '1"},
-    {"host": "h dbname=otra"},                 # inyección en la cadena de conexión
+    {"host": "h dbname=otra"},                 # injection into the connection string
     {"port": 0},
     {"schemas": []},
-    {"type": "teradata"},                      # aún no soportado
+    {"type": "teradata"},                      # not supported yet
 ])
 def test_rejects_bad_config(bad):
     with pytest.raises(ValidationError):
@@ -52,7 +52,7 @@ def test_rejects_bad_config(bad):
 def test_csv_id_is_reserved(tmp_path):
     f = write(tmp_path, "sources:\n  csv:\n    type: postgres\n    host: h\n    database: d\n"
                         "    user: u\n    password_env: X\n")
-    with pytest.raises(ValueError, match="reservado"):
+    with pytest.raises(ValueError, match="reserved"):
         load_sources_file(f)
 
 
@@ -74,7 +74,7 @@ def test_unreachable_server_hides_connection_details(tmp_path, monkeypatch):
     msg = str(err.value)
     assert "s3cr3t" not in msg and "127.0.0.1" not in msg and "d2h_reader" not in msg
     assert "s3cr3t" not in repr(src)
-    # no reintenta en cada petición: falla rápido durante la ventana de espera
+    # does not retry on every request: fails fast during the retry window
     with pytest.raises(SourceUnavailable):
         src.catalog()
 

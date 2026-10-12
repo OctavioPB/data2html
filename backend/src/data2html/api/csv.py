@@ -1,4 +1,4 @@
-"""Subida de CSV: vista previa con tipos sugeridos → confirmación → tabla Parquet."""
+"""CSV upload: preview with suggested types → confirmation → Parquet table."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/csv", tags=["csv"])
 
 @router.post("/preview")
 def csv_preview(file: UploadFile, csv: CsvDep) -> CsvPreview:
-    upload_id = csv.stage(file.file, file.filename or "datos.csv")
+    upload_id = csv.stage(file.file, file.filename or "data.csv")
     return csv.preview(upload_id)
 
 

@@ -1,4 +1,4 @@
-"""Configuración desde variables de entorno. Sin secretos aquí: solo rutas y límites."""
+"""Configuration from environment variables. No secrets here: only paths and limits."""
 
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 @dataclass(frozen=True)
 class Settings:
     data_dir: Path
-    sources_file: Path | None = None  # config/sources.yaml; None = solo CSV
-    content_dir: Path | None = None  # content/: modelos semánticos y reportes (versionados en git)
+    sources_file: Path | None = None  # config/sources.yaml; None = CSV only
+    content_dir: Path | None = None  # content/: semantic models and reports (versioned in git)
     max_upload_mb: int = 500
     duckdb_memory_limit: str = "2GB"
     duckdb_threads: int = 4

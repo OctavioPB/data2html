@@ -1,6 +1,6 @@
-"""Qué tipos de gráfico admite un visual según su encoding.
+"""Which chart types a visual supports given its encoding.
 
-Fuente única de verdad: la usan el studio (vía API), el renderer (selector del HTML) y la IA.
+Single source of truth: used by the studio (through the API), the renderer (the HTML selector) and the AI.
 """
 
 from __future__ import annotations
@@ -11,16 +11,16 @@ _SEQUENTIAL = {FieldType.temporal, FieldType.ordinal}
 
 
 def allowed_marks(dimension: FieldType | None, *, has_color: bool = False) -> list[Mark]:
-    """Marks válidos para una medida agrupada (o no) por una dimensión del tipo dado."""
+    """Valid marks for a measure grouped (or not) by a dimension of the given type."""
     if dimension is None:
         return [Mark.kpi, Mark.table]
     if dimension is FieldType.quantitative:
-        # agrupar por una cantidad continua no tiene sentido sin binning (pendiente)
+        # grouping by a continuous quantity makes no sense without binning (pending)
         return [Mark.table]
     marks = [Mark.table, Mark.bar]
     if dimension in _SEQUENTIAL:
         marks.append(Mark.line)
     if dimension is FieldType.nominal and not has_color:
-        # pastel: partes de un todo sin orden; con color sería un pastel anidado ilegible
+        # pie: unordered parts of a whole; with color it would be an unreadable nested pie
         marks.append(Mark.pie)
     return marks

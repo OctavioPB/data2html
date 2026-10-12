@@ -13,7 +13,7 @@ export interface paths {
         };
         /**
          * Catalog
-         * @description Una fuente caída no tumba el catálogo: aparece con `status="error"`.
+         * @description A source that is down does not take the catalog down: it shows up with `status="error"`.
          */
         get: operations["catalog_api_catalog_get"];
         put?: never;
@@ -51,7 +51,7 @@ export interface paths {
         get?: never;
         /**
          * Put Computed
-         * @description Crea o reemplaza una columna calculada. Se valida ejecutándola antes de guardarla.
+         * @description Create or replace a computed column. It is validated by running it before it is saved.
          */
         put: operations["put_computed_api_catalog__source___table__computed_put"];
         post?: never;
@@ -155,7 +155,7 @@ export interface paths {
         };
         /**
          * Get Profile
-         * @description `query_id` opcional: el studio lo manda para poder cancelar con POST /api/cancel/{query_id}.
+         * @description Optional `query_id`: the studio sends it so it can cancel with POST /api/cancel/{query_id}.
          */
         get: operations["get_profile_api_profile__source___table__get"];
         put?: never;
@@ -246,7 +246,7 @@ export interface paths {
         put?: never;
         /**
          * Cancel Job
-         * @description Cancela una consulta del editor o un perfilado en curso. Idempotente.
+         * @description Cancel an editor query or a running profile. Idempotent.
          */
         post: operations["cancel_job_api_cancel__query_id__post"];
         delete?: never;
@@ -302,7 +302,7 @@ export interface paths {
         put?: never;
         /**
          * Check
-         * @description Valida sin guardar (editor en vivo): forma + catálogo + cada medida ejecutada con WHERE false.
+         * @description Validate without saving (live editor): shape + catalog + every measure run with WHERE false.
          */
         post: operations["check_api_semantic_check_post"];
         delete?: never;
@@ -322,7 +322,7 @@ export interface paths {
         put?: never;
         /**
          * Suggest
-         * @description Consulta del editor SQL → medida (+ dimensión) propuesta para el modelo de esa tabla.
+         * @description SQL editor query → proposed measure (+ dimension) for that table's model.
          */
         post: operations["suggest_api_semantic_suggest_post"];
         delete?: never;
@@ -678,8 +678,8 @@ export interface components {
         FieldType: "nominal" | "ordinal" | "temporal" | "quantitative";
         /**
          * Filter
-         * @description Filtro sobre una dimensión. El valor viene de un parámetro del reporte (`param`) o es fijo
-         *     (`value`); exactamente uno de los dos.
+         * @description Filter on a dimension. The value comes from a report parameter (`param`) or is fixed
+         *     (`value`); exactly one of the two.
          */
         Filter: {
             /** Dimension */
@@ -687,12 +687,12 @@ export interface components {
             op: components["schemas"]["FilterOp"];
             /**
              * Param
-             * @description Parámetro del reporte que aporta el valor
+             * @description Report parameter that provides the value
              */
             param?: string | null;
             /**
              * Value
-             * @description Valor fijo; lista para 'in' y [desde, hasta] para 'between'
+             * @description Fixed value; a list for 'in' and [from, to] for 'between'
              */
             value?: string | number | boolean | (string | number | boolean)[] | null;
         };
@@ -739,14 +739,14 @@ export interface components {
         Measure: {
             /**
              * Sql
-             * @description Una expresión agregada en dialecto DuckDB sobre columnas de la tabla del modelo, p. ej. SUM(monto_bruto - descuento). Sin subconsultas, ventanas ni funciones desconocidas; toda columna dentro de un agregado.
+             * @description One aggregate expression in DuckDB dialect over columns of the model's table, e.g. SUM(gross_amount - discount). No subqueries, windows or unknown functions; every column inside an aggregate.
              */
             sql: string;
             /** @default number */
             format: components["schemas"]["MeasureFormat"];
             /**
              * Owner
-             * @description Responsable de la definición
+             * @description Who is accountable for the definition
              */
             owner: string;
             /** Description */
@@ -798,14 +798,14 @@ export interface components {
         };
         /**
          * RlsRule
-         * @description Filtro por fila para fuentes sin RLS nativo: column = valor del claim del lector.
+         * @description Row filter for sources without native RLS: column = value of the reader's claim.
          */
         RlsRule: {
             /** Column */
             column: string;
             /**
              * Claim
-             * @description Atributo de Identity, p. ej. 'groups' o 'email'
+             * @description Identity attribute, e.g. 'groups' or 'email'
              */
             claim: string;
         };
@@ -833,7 +833,7 @@ export interface components {
             name: string;
             /**
              * Source
-             * @description Id de conexión registrada (nunca credenciales)
+             * @description Id of a registered connection (never credentials)
              */
             source: string;
             /** Table */
@@ -992,7 +992,7 @@ export interface components {
         };
         /**
          * VisualDraft
-         * @description Lo que arma el constructor: un Visual sin id/título/layout (eso llega con los reportes, Fase 6).
+         * @description What the builder assembles: a Visual without id/title/layout (those come with reports, Phase 6).
          */
         VisualDraft: {
             mark: components["schemas"]["Mark"];

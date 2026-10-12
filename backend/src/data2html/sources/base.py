@@ -1,4 +1,4 @@
-"""Interfaz que toda fuente de datos implementa. El resto de la app no conoce la fuente concreta."""
+"""Interface every data source implements. The rest of the app never knows the concrete source."""
 
 from __future__ import annotations
 
@@ -19,13 +19,13 @@ class ColumnInfo:
 class TableInfo:
     name: str
     columns: tuple[ColumnInfo, ...]
-    row_count: int | None = None  # None si contarlo es caro (fuentes remotas)
+    row_count: int | None = None  # None when counting is expensive (remote sources)
     description: str = ""
 
 
 @dataclass(frozen=True)
 class Identity:
-    """Lector autenticado. Siempre viene de auth/, nunca de parámetros de la petición."""
+    """Authenticated reader. Always comes from auth/, never from request parameters."""
 
     user_id: str
     email: str
@@ -37,16 +37,16 @@ class Identity:
 class DataSource(Protocol):
     id: str
     kind: str  # csv, postgres, mysql, teradata…
-    dialect: str  # dialecto SQLGlot que acepta execute(): duckdb, postgres, mysql, teradata
+    dialect: str  # SQLGlot dialect accepted by execute(): duckdb, postgres, mysql, teradata
 
     def catalog(self) -> list[TableInfo]: ...
 
     def table_info(self, name: str) -> TableInfo:
-        """Una tabla del catálogo; `errors.NotFound` si no existe."""
+        """One catalog table; `errors.NotFound` if it does not exist."""
         ...
 
     def relation(self, name: str) -> tuple[str, ...]:
-        """Partes del nombre calificado para el FROM (p. ej. ("pg_dev", "public", "ventas"))."""
+        """Parts of the qualified name for the FROM clause (e.g. ("pg_dev", "public", "sales"))."""
         ...
 
     def execute(
@@ -58,9 +58,9 @@ class DataSource(Protocol):
         timeout_s: int,
         query_id: str | None = None,
     ) -> pa.Table:
-        """Ejecuta un único SELECT ya validado y transpilado. Aplica RLS con `identity`.
+        """Run a single, already validated and transpiled SELECT. Applies RLS with `identity`.
 
-        `query_id` permite cancelarla desde otro hilo con `cancel(query_id)`.
+        `query_id` lets another thread cancel it with `cancel(query_id)`.
         """
         ...
 

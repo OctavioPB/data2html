@@ -66,7 +66,7 @@ def test_filters(db, f, expected):
 
 def test_like_wildcards_are_literal(db):
     _, total = run(db, ExploreRequest(filters=[{"column": "region", "op": "contains", "value": "%_"}]))
-    assert total == 1  # solo '100%_real', no todo
+    assert total == 1  # only '100%_real', not everything
 
 
 def test_search_only_text_columns(db):
@@ -105,12 +105,12 @@ def test_computed_columns(db):
     ("(SELECT max(monto) FROM ventas)", "SUBQUERY"),
     ("sum(monto)", "SUM"),
     ("row_number() OVER ()", "WINDOW"),
-    ("read_text('C:/Windows/win.ini')", "no permitida"),
-    ("getenv('PATH')", "no permitida"),
-    ("current_setting('threads')", "no permitida"),
-    ("otra.monto", "prefijo"),
-    ("nope + 1", "desconocida"),
-    ("monto +", "inválida"),
+    ("read_text('C:/Windows/win.ini')", "not allowed"),
+    ("getenv('PATH')", "not allowed"),
+    ("current_setting('threads')", "not allowed"),
+    ("otra.monto", "prefix"),
+    ("nope + 1", "unknown column"),
+    ("monto +", "invalid expression"),
     ("$p0", "PLACEHOLDER"),
 ])
 def test_computed_rejects_unsafe(expr, msg):
@@ -119,7 +119,7 @@ def test_computed_rejects_unsafe(expr, msg):
 
 
 def test_computed_name_clash():
-    with pytest.raises(InvalidExplore, match="choca"):
+    with pytest.raises(InvalidExplore, match="clashes"):
         build_explore(("ventas",), COLS, [ComputedColumn(name="monto", expr="1")], ExploreRequest())
 
 

@@ -1,4 +1,4 @@
-"""Contrato report-spec. Importa desde aquí, no desde los submódulos."""
+"""The report-spec contract. Import from here, not from the submodules."""
 
 from data2html.spec.compat import allowed_marks
 from data2html.spec.models import (

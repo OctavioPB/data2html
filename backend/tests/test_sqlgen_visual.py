@@ -46,7 +46,7 @@ def visual(**kw) -> Visual:
 def run(db, v, model=MODEL, **kw):
     q = build_visual_query(v, model, ("ventas",), column_types=TYPES, identity=kw.pop("identity", None),
                            author_preview=kw.pop("author_preview", True), **kw)
-    ensure_single_select(q.sql)  # lo generado también pasa la validación de SQL libre
+    ensure_single_select(q.sql)  # generated SQL also passes free-form SQL validation
     return db.execute(q.sql, q.params or None).fetchall(), q
 
 
@@ -99,17 +99,17 @@ def test_filter_values_never_in_sql(db):
 
 
 def test_rls_requires_identity_unless_author_preview(db):
-    with pytest.raises(VisualQueryError, match="identidad"):
+    with pytest.raises(VisualQueryError, match="identity"):
         run(db, visual(dimension="region"), model=RLS_MODEL, author_preview=False)
     rows, _ = run(db, visual(dimension="region"), model=RLS_MODEL, author_preview=True)
-    assert len(rows) == 3  # el autor ve todo
+    assert len(rows) == 3  # the author sees everything
 
 
 def test_rls_filters_by_reader_groups(db):
     reader = Identity(user_id="u1", email="u1@x", provider="local", groups=("Norte", "Centro"))
     rows, q = run(db, visual(dimension="region"), model=RLS_MODEL, identity=reader, author_preview=False)
     assert sorted(r[0] for r in rows) == ["Centro", "Norte"]
-    assert "Norte" not in q.sql  # los claims también van como parámetros
+    assert "Norte" not in q.sql  # claims also travel as parameters
     nobody = Identity(user_id="u2", email="u2@x", provider="local", groups=())
     rows, _ = run(db, visual(dimension="region"), model=RLS_MODEL, identity=nobody, author_preview=False)
     assert rows == []

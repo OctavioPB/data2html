@@ -1,6 +1,6 @@
-"""Vuelca el OpenAPI de la app para generar los tipos TS del studio sin levantar el servidor.
+"""Dump the app's OpenAPI to generate the studio's TS types without starting the server.
 
-    python -m data2html.api.openapi [ruta]   (default: ../studio/src/generated/openapi.json)
+    python -m data2html.api.openapi [path]   (default: ../studio/src/generated/openapi.json)
 """
 
 from __future__ import annotations

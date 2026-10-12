@@ -1,4 +1,4 @@
-"""Editor SQL: ejecutar por páginas, cancelar, historial y consultas guardadas."""
+"""SQL editor: run page by page, cancel, history and saved queries."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from data2html import cancel
 from data2html.api.deps import RegistryDep, SettingsDep
 from data2html.api.explore import to_cell
 from data2html.api.schemas import Cell, ExploreColumn
+from data2html.i18n import tr
 from data2html.settings import Settings
 from data2html.sqlgen.freeform import MAX_PAGE, count_sql, page_sql, prepare_user_sql
 from data2html.sqlstore import SQL_MAX, HistoryEntry, SavedName, SavedQuery, SqlStore
@@ -61,7 +62,7 @@ class SaveIn(BaseModel):
 
 
 def duckdb_type(t: pa.DataType) -> str:
-    """Tipo Arrow del resultado → nombre de tipo DuckDB (el mismo vocabulario que el catálogo)."""
+    """Arrow type of the result → DuckDB type name (the same vocabulary as the catalog)."""
     if pa.types.is_boolean(t):
         return "BOOLEAN"
     if pa.types.is_integer(t):
@@ -127,19 +128,20 @@ def list_saved(store: StoreDep) -> list[SavedQuery]:
 
 @router.put("/saved/{name}")
 def save(name: SavedName, body: SaveIn, store: StoreDep, registry: RegistryDep) -> SavedQuery:
-    registry.get(body.source)  # 404 si la fuente no existe
+    registry.get(body.source)  # 404 if the source does not exist
     return store.save(name, body.source, body.sql)
 
 
 @router.delete("/saved/{name}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_saved(name: str, store: StoreDep) -> None:
     if not store.delete(name):
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=f"consulta guardada desconocida: {name!r}")
+        detail = tr("unknown saved query: {name}", name=repr(name))
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=detail)
 
 
 @jobs.post("/cancel/{query_id}", status_code=status.HTTP_204_NO_CONTENT)
 def cancel_job(query_id: str, registry: RegistryDep) -> None:
-    """Cancela una consulta del editor o un perfilado en curso. Idempotente."""
+    """Cancel an editor query or a running profile. Idempotent."""
     cancel.check_id(query_id)
     cancel.request(query_id)
     for src in registry.all():

@@ -1,4 +1,4 @@
-"""Modelos semánticos y constructor de visuales (studio, autor único)."""
+"""Semantic models and the visual builder (studio, single author)."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from data2html.api.deps import RegistryDep, SettingsDep
 from data2html.api.explore import to_cell
 from data2html.api.schemas import Cell, ExploreColumn
 from data2html.api.sql import duckdb_type
+from data2html.i18n import tr
 from data2html.semantic.check import check_model
 from data2html.semantic.store import ModelStore
 from data2html.semantic.suggest import Suggestion, suggest_from_sql
@@ -57,7 +58,7 @@ class ModelEntry(BaseModel):
 class ModelList(BaseModel):
     model_config = ConfigDict(extra="forbid")
     models: list[ModelEntry]
-    broken: dict[str, str]  # archivos YAML que no validan → error
+    broken: dict[str, str]  # YAML files that do not validate → error
 
 
 class SuggestIn(BaseModel):
@@ -67,7 +68,7 @@ class SuggestIn(BaseModel):
 
 
 class VisualDraft(BaseModel):
-    """Lo que arma el constructor: un Visual sin id/título/layout (eso llega con los reportes, Fase 6)."""
+    """What the builder assembles: a Visual without id/title/layout (those come with reports, Phase 6)."""
 
     model_config = ConfigDict(extra="forbid")
     mark: Mark
@@ -89,7 +90,7 @@ class VisualResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
     columns: list[ExploreColumn]
     rows: list[list[Cell]]
-    sql: str  # SQL generado, para transparencia del autor
+    sql: str  # generated SQL, for the author's transparency
     allowed_marks: list[Mark]
 
 
@@ -97,11 +98,11 @@ def _check(model: SemanticModel, registry: RegistryDep, *, full: bool, timeout_s
     try:
         src = registry.get(model.source)
     except SourceError:
-        return [f"fuente desconocida: '{model.source}'"]
+        return [tr("unknown source: {name}", name=repr(model.source))]
     try:
         return check_model(model, src, run_measures=full, timeout_s=timeout_s)
     except SourceUnavailable as e:
-        return [f"no se pudo validar contra la fuente: {e}"]
+        return [tr("could not validate against the source: {error}", error=e)]
 
 
 @router.get("")
@@ -121,7 +122,7 @@ def get_model(name: Ident, store: StoreDep, registry: RegistryDep, settings: Set
 
 @router.post("/check")
 def check(model: SemanticModel, registry: RegistryDep, settings: SettingsDep) -> list[str]:
-    """Valida sin guardar (editor en vivo): forma + catálogo + cada medida ejecutada con WHERE false."""
+    """Validate without saving (live editor): shape + catalog + every measure run with WHERE false."""
     return _check(model, registry, full=True, timeout_s=settings.query_timeout_s)
 
 
@@ -130,7 +131,7 @@ def put_model(
     name: Ident, model: SemanticModel, store: StoreDep, registry: RegistryDep, settings: SettingsDep
 ) -> ModelEntry:
     if model.name != name:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="el nombre del modelo no coincide")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=tr("the model name does not match"))
     errors = _check(model, registry, full=True, timeout_s=settings.query_timeout_s)
     if errors:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="; ".join(errors))
@@ -145,7 +146,7 @@ def delete_model(name: Ident, store: StoreDep) -> None:
 
 @router.post("/suggest")
 def suggest(body: SuggestIn, registry: RegistryDep, store: StoreDep) -> Suggestion:
-    """Consulta del editor SQL → medida (+ dimensión) propuesta para el modelo de esa tabla."""
+    """SQL editor query → proposed measure (+ dimension) for that table's model."""
     src = registry.get(body.source)
     tables = {t.name: {c.name: c.type for c in t.columns} for t in src.catalog()}
     models, _ = store.list()
@@ -171,7 +172,7 @@ def visual_query(
         visual, model, src.relation(model.table),
         column_types={c.name: c.type for c in info.columns},
         report_params=dict(req.params),
-        # vista previa del autor en el studio; el visor (Fase 6) pasa la identidad del lector
+        # the author's preview in the studio; the viewer (Phase 6) passes the reader's identity
         identity=None, author_preview=True,
     )
     table = src.execute(q.sql, q.params, identity=None, timeout_s=settings.query_timeout_s)

@@ -86,6 +86,6 @@ def test_compat_rejects_unknown_dimension(client):
 
 
 def test_committed_openapi_is_up_to_date():
-    # Si falla: python -m data2html.api.openapi && (cd studio && npm run gen:api)
+    # If this fails: python -m data2html.api.openapi && (cd studio && npm run gen:api)
     committed = DEFAULT_OUT.read_text(encoding="utf-8").replace("\r\n", "\n")
     assert committed == render_openapi()
