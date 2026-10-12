@@ -8,7 +8,7 @@ export type ExploreQuery = Required<Pick<Schemas['ExploreRequest'], 'sort' | 'fi
 export type { Cell } from './usePagedRows'
 
 /**
- * Filas del explorador. `query` debe ser estable (memoizada); cambiarla, o `refreshKey`, reinicia todo.
+ * Explorer rows. `query` must be stable (memoized); changing it, or `refreshKey`, starts over.
  */
 export function useExplorePages(source: string, table: string, query: ExploreQuery, refreshKey = '') {
   const fetcher = useMemo<FetchPage>(
@@ -21,7 +21,7 @@ export function useExplorePages(source: string, table: string, query: ExploreQue
       if (!response.ok || !data) throw new Error(errorMessage(error, response.status))
       return data
     },
-    // refreshKey no se usa dentro: solo fuerza un fetcher (y un store) nuevo
+    // refreshKey is not used inside: it only forces a new fetcher (and store)
     // oxlint-disable-next-line react-hooks/exhaustive-deps
     [source, table, query, refreshKey],
   )

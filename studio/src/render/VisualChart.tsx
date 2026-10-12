@@ -1,11 +1,11 @@
 /**
- * Render de un visual a partir de filas YA agregadas (no re-agrega). Lo usan la vista rápida del editor
- * SQL y el constructor; la Fase 6 lo reutiliza en el visor.
+ * Renders a visual from ALREADY aggregated rows (it never re-aggregates). Used by the SQL editor's quick
+ * view and by the builder; Phase 6 reuses it in the viewer.
  *
- * Mapeo (skill html-renderer): bar/line/pie → ECharts; kpi → número formateado; table → <table> DOM
- * (React escapa el texto). Estilo (skill dataviz): una serie por tono en orden fijo de la paleta validada
- * (--series-N), barras con extremo redondeado de 4px y 2px de separación, líneas de 2px, marcadores de
- * 8px con anillo de 2px, rejilla recesiva, leyenda solo con ≥2 series, tooltip siempre.
+ * Mapping (html-renderer skill): bar/line/pie → ECharts; kpi → formatted number; table → DOM <table>
+ * (React escapes the text). Style (dataviz skill): one hue per series in the validated palette's fixed
+ * order (--series-N), bars with a 4px rounded end and 2px gaps, 2px lines, 8px markers with a 2px ring,
+ * recessive grid, legend only with ≥2 series, tooltip always.
  */
 import { BarChart, LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components'
@@ -15,6 +15,7 @@ import { SVGRenderer } from 'echarts/renderers'
 import { useEffect, useMemo, useRef } from 'react'
 
 import type { Schemas } from '../api/client'
+import { t as translate, useLang, useT, type MessageKey, type Params } from '../i18n'
 import type { Cell, Column } from '../explore/usePagedRows'
 import { usePrefersDark } from '../explore/usePrefersDark'
 import { formatter } from './format'
@@ -41,10 +42,11 @@ function cssVar(name: string): string {
 }
 
 export function VisualChart(props: VisualChartProps) {
+  const t = useT()
   const { mark, columns, rows, measures } = props
   if (mark === 'table') return <DataTable columns={columns} rows={rows} format={props.format} measures={measures} />
   if (mark === 'kpi') return <Kpi {...props} />
-  if (rows.length === 0) return <p className="muted">Sin filas para graficar.</p>
+  if (rows.length === 0) return <p className="muted">{t('chart.noRows')}</p>
   return <EChart {...props} />
 }
 
@@ -82,7 +84,8 @@ function DataTable({ columns, rows, format, measures }: Pick<VisualChartProps, '
 }
 
 function Kpi({ columns, rows, measures, format }: VisualChartProps) {
-  if (rows.length !== 1) return <p className="muted">Un KPI necesita una sola fila (sin dimensión).</p>
+  const t = useT()
+  if (rows.length !== 1) return <p className="muted">{t('chart.kpiOneRow')}</p>
   const fmt = formatter(format)
   return (
     <div className="kpis">
@@ -104,8 +107,10 @@ interface Series {
   values: (number | null)[]
 }
 
-/** Filas → categorías y series. Con `color`, una serie por valor (pivot, no agregación). */
-function toSeries(props: VisualChartProps): { cats: string[]; series: Series[] } | { error: string } {
+/** Rows → categories and series. With `color`, one series per value (a pivot, not an aggregation). */
+function toSeries(
+  props: VisualChartProps,
+): { cats: string[]; series: Series[] } | { error: MessageKey; params: Params } {
   const { columns, rows, dimension, color, measures } = props
   const idx = (name: string) => columns.findIndex((c) => c.name === name)
   const di = dimension ? idx(dimension) : -1
@@ -117,7 +122,7 @@ function toSeries(props: VisualChartProps): { cats: string[]; series: Series[] }
     const cats = [...new Set(rows.map((r) => label(r[di])))]
     const names = [...new Set(rows.map((r) => label(r[ci])))]
     if (names.length > MAX_SERIES) {
-      return { error: `${names.length} valores de color (máximo ${MAX_SERIES}): filtra o quita el color.` }
+      return { error: 'chart.tooManyColors', params: { n: names.length, max: MAX_SERIES } }
     }
     const series = names.map((name) => {
       const byCat = new Map(rows.filter((r) => label(r[ci]) === name).map((r) => [label(r[di]), num(r[mi])]))
@@ -132,6 +137,8 @@ function toSeries(props: VisualChartProps): { cats: string[]; series: Series[] }
 function EChart(props: VisualChartProps) {
   const { mark, rows, format, height = 360 } = props
   const host = useRef<HTMLDivElement>(null)
+  const t = useT()
+  const lang = useLang()
   const dark = usePrefersDark()
   const shaped = useMemo(() => toSeries(props), [props])
   const tooManySlices = mark === 'pie' && rows.length > MAX_PIE
@@ -204,9 +211,9 @@ function EChart(props: VisualChartProps) {
             },
       ),
     }
-    // `dark` no se usa dentro, pero los tokens CSS cambian con él: recalcular
+    // `dark` and `lang` are not used directly: CSS tokens and number formats change with them
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [shaped, mark, format, dark, tooManySlices])
+  }, [shaped, mark, format, dark, lang, tooManySlices])
 
   useEffect(() => {
     if (!host.current || !option) return
@@ -220,9 +227,17 @@ function EChart(props: VisualChartProps) {
     }
   }, [option])
 
-  if ('error' in shaped) return <p className="muted">{shaped.error}</p>
+  if ('error' in shaped) return <p className="muted">{translate(shaped.error, shaped.params)}</p>
   if (tooManySlices) {
-    return <p className="muted">Demasiadas categorías para un pastel ({rows.length}; máximo {MAX_PIE}). Usa barras.</p>
+    return <p className="muted">{t('chart.tooManySlices', { n: rows.length, max: MAX_PIE })}</p>
   }
-  return <div className="echart" style={{ height }} ref={host} role="img" aria-label={`Gráfico de ${props.measures.join(', ')}`} />
+  return (
+    <div
+      className="echart"
+      style={{ height }}
+      ref={host}
+      role="img"
+      aria-label={t('chart.ariaLabel', { measures: props.measures.join(', ') })}
+    />
+  )
 }

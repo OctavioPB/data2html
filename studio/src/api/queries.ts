@@ -12,7 +12,7 @@ async function unwrap<T>(req: Promise<{ data?: T; error?: unknown; response: Res
 export function errorMessage(error: unknown, status: number): string {
   const detail = (error as { detail?: unknown } | undefined)?.detail
   if (typeof detail === 'string') return detail
-  // errores de validación de Pydantic: solo el mensaje, sin el prefijo técnico "Value error, "
+  // Pydantic validation errors: only the message, without the technical "Value error, " prefix
   if (Array.isArray(detail)) {
     return detail.map((d: { msg?: string }) => (d.msg ?? '').replace(/^Value error, /, '')).join('; ')
   }
@@ -97,7 +97,7 @@ export function useDeleteComputed(source: string, table: string) {
   })
 }
 
-/** Perfil EDA. `cancel()` detiene el cálculo en el servidor (POST /api/cancel/{query_id}). */
+/** EDA profile. `cancel()` stops the computation on the server (POST /api/cancel/{query_id}). */
 export function useProfile(source: string, table: string, computedKey: string) {
   const running = useRef<string | null>(null)
   const query = useQuery({
@@ -112,7 +112,7 @@ export function useProfile(source: string, table: string, computedKey: string) {
         }),
       )
     },
-    staleTime: Infinity, // el backend cachea; "Recalcular" fuerza
+    staleTime: Infinity, // the backend caches; "Recompute" forces it
     retry: false,
   })
   const cancel = () => {
@@ -179,7 +179,7 @@ export function useCompat(dimension: Schemas['FieldType'] | null, hasColor: bool
   })
 }
 
-/** Cancela una consulta del editor o un perfilado (idempotente). */
+/** Cancel an editor query or a profiling run (idempotent). */
 export function cancelJob(queryId: string) {
   return api.POST('/api/cancel/{query_id}', { params: { path: { query_id: queryId } } })
 }
@@ -188,7 +188,7 @@ export function newQueryId(): string {
   return crypto.randomUUID().replaceAll('-', '')
 }
 
-// ------------------------------------------------------------------ modelo semántico (Fase 5)
+// ------------------------------------------------------------------ semantic model (Phase 5)
 
 export function useModels() {
   return useQuery({ queryKey: ['models'], queryFn: () => unwrap(api.GET('/api/semantic')) })
@@ -230,7 +230,7 @@ export function useVisualQuery(req: Schemas['VisualRequest'] | null) {
     queryFn: ({ signal }) => unwrap(api.POST('/api/visual/query', { body: req!, signal })),
     enabled: req !== null,
     retry: false,
-    placeholderData: (prev) => prev, // al cambiar de mark/filtro, conservar el gráfico anterior mientras llega
+    placeholderData: (prev) => prev, // when the mark/filter changes, keep the previous chart while the new one arrives
   })
 }
 

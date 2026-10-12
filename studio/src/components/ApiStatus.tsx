@@ -1,12 +1,14 @@
 import { useHealth } from '../api/queries'
+import { useT } from '../i18n'
 
 export function ApiStatus() {
+  const t = useT()
   const { data, isPending, isError } = useHealth()
   const [state, label] = isPending
-    ? ['pending', 'API…']
+    ? ['pending', t('api.pending')]
     : isError
-      ? ['down', 'API sin conexión']
-      : ['ok', `API OK · v${data.version}`]
+      ? ['down', t('api.down')]
+      : ['ok', t('api.ok', { version: data.version })]
   return (
     <span className="api-status" data-state={state} role="status">
       <span className="dot" aria-hidden />

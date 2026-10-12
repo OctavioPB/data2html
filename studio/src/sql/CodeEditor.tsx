@@ -6,8 +6,10 @@ import { basicSetup } from 'codemirror'
 import { tags as t } from '@lezer/highlight'
 import { useEffect, useRef } from 'react'
 
-// Resaltado con tokens propios (--code-*): el de CodeMirror por defecto es para fondo claro y en
-// oscuro los keywords quedaban ilegibles. Contraste de texto ≥ 4.5:1 en ambos modos.
+import { t as translate } from '../i18n'
+
+// Highlighting with our own tokens (--code-*): CodeMirror's default targets light backgrounds and
+// keywords were unreadable in dark mode. Text contrast ≥ 4.5:1 in both modes.
 const highlight = HighlightStyle.define([
   { tag: t.keyword, color: 'var(--code-keyword)', fontWeight: '600' },
   { tag: [t.string, t.special(t.string)], color: 'var(--code-string)' },
@@ -17,7 +19,7 @@ const highlight = HighlightStyle.define([
   { tag: [t.operator, t.punctuation, t.separator], color: 'var(--muted)' },
 ])
 
-// Colores desde los tokens del studio: funciona igual en claro y oscuro
+// Colors from the studio's tokens: works the same in light and dark
 const theme = EditorView.theme({
   '&': { fontSize: '13px', backgroundColor: 'var(--panel)', color: 'var(--text)', height: '100%' },
   '.cm-scroller': { fontFamily: "ui-monospace, 'Cascadia Code', Consolas, monospace" },
@@ -42,7 +44,7 @@ export function CodeEditor({ value, onChange, onRun, schema }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const view = useRef<EditorView | null>(null)
   const lang = useRef(new Compartment())
-  // los callbacks cambian en cada render; el editor se crea una vez y los lee de refs
+  // callbacks change on every render; the editor is created once and reads them from refs
   const cb = useRef({ onChange, onRun })
   cb.current = { onChange, onRun }
 
@@ -62,24 +64,24 @@ export function CodeEditor({ value, onChange, onRun, schema }: Props) {
           EditorView.updateListener.of((u) => {
             if (u.docChanged) cb.current.onChange(u.state.doc.toString())
           }),
-          EditorView.contentAttributes.of({ 'aria-label': 'Editor SQL' }),
+          EditorView.contentAttributes.of({ 'aria-label': translate('sql.editorLabel') }),
         ],
       }),
     })
     view.current = v
     return () => v.destroy()
-    // el editor vive mientras viva el componente; doc y esquema se sincronizan abajo
+    // the editor lives as long as the component; doc and schema are synced below
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // esquema nuevo (otra fuente) → reconfigurar el autocompletado
+  // new schema (another source) → reconfigure autocompletion
   useEffect(() => {
     view.current?.dispatch({
       effects: lang.current.reconfigure(sql({ dialect: StandardSQL, schema, upperCaseKeywords: true })),
     })
   }, [schema])
 
-  // valor cambiado desde fuera (historial, guardadas) → reemplazar el documento
+  // value changed from outside (history, saved queries) → replace the document
   useEffect(() => {
     const v = view.current
     if (v && v.state.doc.toString() !== value) {

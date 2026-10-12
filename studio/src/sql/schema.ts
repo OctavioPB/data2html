@@ -2,7 +2,7 @@ import type { SQLNamespace } from '@codemirror/lang-sql'
 
 import type { Schemas } from '../api/client'
 
-/** Esquema para el autocompletado: `public.fact_ventas` → { public: { fact_ventas: [cols] } }. */
+/** Autocompletion schema: `public.fact_sales` → { public: { fact_sales: [cols] } }. */
 export function schemaFor(tables: Schemas['TableOut'][]): SQLNamespace {
   const ns: Record<string, unknown> = {}
   for (const t of tables) {

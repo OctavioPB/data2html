@@ -87,7 +87,7 @@ h1, h2 { margin: 0; }
   .sidebar { border-right: 0; border-bottom: 1px solid var(--border); }
 }
 
-/* ---------- componentes de Fase 1 ---------- */
+/* ---------- Phase 1 components ---------- */
 :root { --warn-bg: #fff6e0; --warn-text: #7a5300; }
 @media (prefers-color-scheme: dark) {
   :root { --warn-bg: #3a2f12; --warn-text: #f2d48a; }
@@ -169,7 +169,7 @@ input[aria-invalid='true'] { border-color: var(--down); }
   font-size: 0.85rem;
 }
 
-/* ---------- Fase 2: explorador ---------- */
+/* ---------- Phase 2: explorer ---------- */
 .table-view { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .table-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
 .tabs { margin-left: auto; display: flex; gap: 4px; }
@@ -223,9 +223,9 @@ input[aria-invalid='true'] { border-color: var(--down); }
 .chip-label { color: inherit; padding: 0; }
 .computed-chip { border-color: var(--accent); }
 
-/* ---------- Fase 3: perfil EDA ---------- */
-/* Tokens de gráficos (paleta de referencia de la skill dataviz): una serie = un tono; correlación
-   divergente azul (+) / rojo (−) con gris neutro al centro. */
+/* ---------- Phase 3: EDA profile ---------- */
+/* Chart tokens (the dataviz skill reference palette): one series = one hue; correlation
+   diverging blue (+) / red (−) with a neutral gray in the middle. */
 :root {
   --series-1: #2a78d6;
   --div-pos: #2a78d6;
@@ -304,8 +304,8 @@ input[aria-invalid='true'] { border-color: var(--down); }
 .corr-legend { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 0.75rem; color: var(--muted); }
 .corr-ramp { width: 160px; height: 8px; border-radius: 4px; background: linear-gradient(in oklab 90deg, var(--div-neg), var(--div-mid), var(--div-pos)); }
 
-/* ---------- Fase 4: editor SQL ---------- */
-/* Paleta categórica de referencia (skill dataviz, validada claro/oscuro); orden fijo, nunca ciclar. */
+/* ---------- Phase 4: SQL editor ---------- */
+/* Reference categorical palette (dataviz skill, validated light/dark); fixed order, never cycled. */
 :root {
   --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100;
   --series-5: #e87ba4; --series-6: #008300; --series-7: #6250d6; --series-8: #e34948;
@@ -380,13 +380,13 @@ input[aria-invalid='true'] { border-color: var(--down); }
   .sql-view { grid-template-columns: 1fr; }
 }
 
-/* Resaltado del editor SQL: texto, no series → contraste ≥ 4.5:1 sobre --panel */
+/* SQL editor highlighting: text, not series → contrast ≥ 4.5:1 over --panel */
 :root { --code-keyword: #1d5fc9; --code-string: #0b7a52; --code-number: #a8471b; --code-type: #5b47c9; }
 @media (prefers-color-scheme: dark) {
   :root { --code-keyword: #8fb4f5; --code-string: #5fd1a3; --code-number: #f0a070; --code-type: #b0a8f0; }
 }
 
-/* ---------- Fase 5: modelos y constructor ---------- */
+/* ---------- Phase 5: models and builder ---------- */
 .nav-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
 .nav-group .nav-item { margin-bottom: 0; }
 .ok { color: var(--ok); }
@@ -505,3 +505,7 @@ input[aria-invalid='true'], select[aria-invalid='true'] { border-color: var(--do
   .shelves, .me-head { grid-template-columns: 1fr; }
   .me-measure { grid-template-columns: 1fr; }
 }
+
+/* ---------- language selector ---------- */
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.lang-switch button { padding: 2px 8px; font-size: 0.75rem; letter-spacing: 0.04em; }

@@ -1,12 +1,13 @@
 /**
- * "Publicar como medida…": la consulta del editor SQL se convierte en una medida (+ dimensión) del modelo
- * semántico de su tabla, con dueño y descripción. Luego abre el constructor con ese visual. Así el número
- * queda definido una vez en el modelo (ADR 0004), no incrustado en un visual.
+ * "Publish as measure…": the SQL editor query becomes a measure (+ dimension) of its table's semantic
+ * model, with an owner and a description. Then the builder opens with that visual. That way the number
+ * is defined once in the model (ADR 0004), not embedded in a visual.
  */
 import { useEffect, useState } from 'react'
 
 import { api, type Schemas } from '../api/client'
 import { errorMessage, useSaveModel, useSuggest } from '../api/queries'
+import { useT } from '../i18n'
 import { fromDraft, IDENT, nextKey, slug, toDraft, type ModelDraft } from '../semantic/draft'
 import { useStudio } from '../store'
 
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export function PromoteDialog({ source, sql, onClose }: Props) {
+  const t = useT()
   const suggest = useSuggest()
   const save = useSaveModel()
   const openModels = useStudio((s) => s.openModels)
@@ -33,13 +35,13 @@ export function PromoteDialog({ source, sql, onClose }: Props) {
       { source, sql },
       {
         onSuccess: (s) => {
-          setModelName(s.model ?? slug(s.table.split('.').pop() ?? s.table, 'modelo'))
+          setModelName(s.model ?? slug(s.table.split('.').pop() ?? s.table, 'model'))
           setMeasureName(s.measure_name)
           setDimName(s.dimension?.name ?? '')
         },
       },
     )
-    // una sugerencia por apertura del diálogo
+    // one suggestion per opening of the dialog
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -51,7 +53,7 @@ export function PromoteDialog({ source, sql, onClose }: Props) {
   const confirm = async () => {
     if (!s || !valid) return
     setError(null)
-    // modelo existente (si lo hay) + lo que falte
+    // existing model (if any) + whatever is missing
     let draft: ModelDraft = { name: modelName, source: s.source, table: s.table, dimensions: [], measures: [], rls: null }
     if (s.model) {
       const { data, error: err, response } = await api.GET('/api/semantic/{name}', { params: { path: { name: s.model } } })
@@ -83,18 +85,17 @@ export function PromoteDialog({ source, sql, onClose }: Props) {
     <div className="overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="dialog" role="dialog" aria-modal aria-labelledby="promote-title">
         <header>
-          <h2 id="promote-title">Publicar como medida</h2>
-          <button className="btn ghost" onClick={onClose} aria-label="Cerrar">
+          <h2 id="promote-title">{t('promote.title')}</h2>
+          <button className="btn ghost" onClick={onClose} aria-label={t('common.close')}>
             ✕
           </button>
         </header>
-        {suggest.isPending && <p className="muted">Analizando la consulta…</p>}
+        {suggest.isPending && <p className="muted">{t('promote.analyzing')}</p>}
         {suggest.isError && <p className="error">{suggest.error.message}</p>}
         {s && (
           <>
             <p className="muted small">
-              La medida se define una sola vez en el modelo de <span className="mono">{s.source}.{s.table}</span>; los
-              visuales solo la nombran.
+              {t('promote.intro', { table: `${s.source}.${s.table}` })}
             </p>
             {s.warnings.map((w) => (
               <p key={w} className="warnings">
@@ -102,30 +103,30 @@ export function PromoteDialog({ source, sql, onClose }: Props) {
               </p>
             ))}
             <label className="field">
-              <span>Modelo {s.model ? '(existente)' : '(nuevo)'}</span>
+              <span>{s.model ? t('promote.modelExisting') : t('promote.modelNew')}</span>
               <input className="mono" value={modelName} disabled={Boolean(s.model)} onChange={(e) => setModelName(e.target.value)} aria-invalid={!IDENT.test(modelName)} />
             </label>
             <label className="field">
-              <span>Medida {s.measure_exists && '(ya existe en el modelo: se reutiliza)'}</span>
+              <span>{s.measure_exists ? t('promote.measureExists') : t('promote.measure')}</span>
               <input className="mono" value={measureName} disabled={s.measure_exists} onChange={(e) => setMeasureName(e.target.value)} aria-invalid={!IDENT.test(measureName)} />
             </label>
             <pre className="mono promote-sql">{s.measure_sql}</pre>
             {!s.measure_exists && (
               <div className="promote-grid">
                 <label className="field">
-                  <span>Formato</span>
+                  <span>{t('measure.format')}</span>
                   <select value={format} onChange={(e) => setFormat(e.target.value as Schemas['MeasureFormat'])}>
-                    <option value="number">número</option>
-                    <option value="currency">moneda</option>
-                    <option value="percent">porcentaje</option>
+                    <option value="number">{t('format.number')}</option>
+                    <option value="currency">{t('format.currency')}</option>
+                    <option value="percent">{t('format.percent')}</option>
                   </select>
                 </label>
                 <label className="field">
-                  <span>Dueño (área responsable)</span>
+                  <span>{t('promote.owner')}</span>
                   <input value={owner} onChange={(e) => setOwner(e.target.value)} aria-invalid={!owner.trim()} />
                 </label>
                 <label className="field promote-desc">
-                  <span>Descripción (qué mide y qué excluye)</span>
+                  <span>{t('promote.description')}</span>
                   <input value={description} onChange={(e) => setDescription(e.target.value)} aria-invalid={!description.trim()} />
                 </label>
               </div>
@@ -133,7 +134,8 @@ export function PromoteDialog({ source, sql, onClose }: Props) {
             {s.dimension && (
               <label className="field">
                 <span>
-                  Dimensión sobre <span className="mono">{s.dimension.column}</span> {s.dimension.exists && '(ya existe)'}
+                  {t('promote.dimensionOn')} <span className="mono">{s.dimension.column}</span>{' '}
+                  {s.dimension.exists && t('promote.exists')}
                 </span>
                 <input className="mono" value={dimName} disabled={s.dimension.exists} onChange={(e) => setDimName(e.target.value)} aria-invalid={!IDENT.test(dimName)} />
               </label>
@@ -143,10 +145,10 @@ export function PromoteDialog({ source, sql, onClose }: Props) {
         <footer className="actions">
           {error && <span className="error">{error}</span>}
           <button className="btn" onClick={onClose}>
-            Cancelar
+            {t('common.cancel')}
           </button>
           <button className="btn primary" disabled={!valid || save.isPending} onClick={() => void confirm()}>
-            {save.isPending ? 'Validando y guardando…' : 'Guardar y abrir en el constructor'}
+            {save.isPending ? t('promote.saving') : t('promote.confirm')}
           </button>
         </footer>
       </div>

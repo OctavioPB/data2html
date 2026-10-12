@@ -1,4 +1,5 @@
 import type { Schemas } from '../api/client'
+import { t } from '../i18n'
 
 type Model = Schemas['SemanticModel']
 type FieldType = Schemas['FieldType']
@@ -64,7 +65,7 @@ export function fromDraft(d: ModelDraft): Model {
   }
 }
 
-export function slug(text: string, fallback = 'campo'): string {
+export function slug(text: string, fallback = 'field'): string {
   const s = text
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
@@ -74,28 +75,28 @@ export function slug(text: string, fallback = 'campo'): string {
   return (/^[a-z]/.test(s) ? s : `${fallback}_${s}`).slice(0, 63)
 }
 
-/** Tipo de dimensión sugerido a partir del tipo DuckDB de la columna. */
+/** Suggested dimension type from the column's DuckDB type. */
 export function guessType(dbType: string): FieldType {
   if (/^(DATE|TIMESTAMP)/i.test(dbType)) return 'temporal'
   return 'nominal'
 }
 
-/** Problemas locales (antes de preguntar al servidor). */
+/** Local problems (before asking the server). */
 export function localErrors(d: ModelDraft): string[] {
   const errs: string[] = []
-  if (!IDENT.test(d.name)) errs.push('nombre del modelo: minúsculas, dígitos y _; empieza con letra')
-  if (!d.table) errs.push('elige una tabla')
+  if (!IDENT.test(d.name)) errs.push(t('draft.modelName'))
+  if (!d.table) errs.push(t('draft.pickTable'))
   const names = [...d.dimensions.map((x) => x.name), ...d.measures.map((x) => x.name)]
-  names.filter((n) => !IDENT.test(n)).forEach((n) => errs.push(`nombre inválido: '${n || '(vacío)'}'`))
+  names.filter((n) => !IDENT.test(n)).forEach((n) => errs.push(t('draft.invalidName', { name: n || t('draft.empty') })))
   const dup = names.filter((n, i) => names.indexOf(n) !== i)
-  if (dup.length) errs.push(`nombres repetidos: ${[...new Set(dup)].join(', ')}`)
+  if (dup.length) errs.push(t('draft.duplicates', { names: [...new Set(dup)].join(', ') }))
   d.measures.forEach((m) => {
-    if (!m.owner.trim() || !m.description.trim()) errs.push(`medida '${m.name}': falta dueño o descripción`)
+    if (!m.owner.trim() || !m.description.trim()) errs.push(t('draft.measureNeedsOwner', { name: m.name }))
   })
   return errs
 }
 
-/** YAML de un visual para pegar en un reporte (id/título/layout de ejemplo hasta la Fase 6). */
+/** A visual's YAML to paste into a report (sample id/title/layout until Phase 6). */
 export function visualYaml(v: Schemas['VisualDraft'], title: string): string {
   const q = (s: string) => (/^[\w-]+$/.test(s) ? s : JSON.stringify(s))
   const lines = [`- id: ${slug(title, 'visual')}`, `  title: ${JSON.stringify(title)}`, `  mark: ${v.mark}`, `  measure: ${v.measure}`]

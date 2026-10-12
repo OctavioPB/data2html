@@ -10,6 +10,8 @@ import '@glideapps/glide-data-grid/dist/index.css'
 import { useCallback, useMemo } from 'react'
 
 import type { Schemas } from '../api/client'
+import { useLang } from '../i18n'
+import { numberFormat } from '../i18n/format'
 import { usePrefersDark } from './usePrefersDark'
 import type { Cell } from './useExplorePages'
 
@@ -36,12 +38,11 @@ const DARK: Partial<Theme> = {
 }
 
 const NUMERIC = /^(TINYINT|SMALLINT|INTEGER|BIGINT|HUGEINT|U\w*INT|FLOAT|DOUBLE|REAL|DECIMAL)/i
-const nf = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 6 })
 
 function toGridCell(v: Cell | undefined): GridCell {
   if (v === undefined) return { kind: GridCellKind.Loading, allowOverlay: false }
   if (v === null) return { kind: GridCellKind.Text, data: '', displayData: '∅', allowOverlay: false, style: 'faded' }
-  if (typeof v === 'number') return { kind: GridCellKind.Number, data: v, displayData: nf.format(v), allowOverlay: false, readonly: true }
+  if (typeof v === 'number') return { kind: GridCellKind.Number, data: v, displayData: numberFormat({ maximumFractionDigits: 6 }).format(v), allowOverlay: false, readonly: true }
   if (typeof v === 'boolean') return { kind: GridCellKind.Boolean, data: v, allowOverlay: false, readonly: true }
   return { kind: GridCellKind.Text, data: v, displayData: v, allowOverlay: true, readonly: true }
 }
@@ -52,12 +53,13 @@ interface Props {
   getRow: (row: number) => Cell[] | undefined
   ensureRange: (start: number, end: number) => void
   sort?: SortKey[]
-  /** Sin `onSort`, el clic en el encabezado no ordena (p. ej. resultados del editor SQL). */
+  /** Without `onSort`, clicking a header does not sort (e.g. SQL editor results). */
   onSort?: (sort: SortKey[]) => void
 }
 
 export function ExploreGrid({ columns, rows, getRow, ensureRange, sort = [], onSort }: Props) {
   const dark = usePrefersDark()
+  const lang = useLang()
 
   const gridColumns = useMemo<GridColumn[]>(
     () =>
@@ -76,7 +78,9 @@ export function ExploreGrid({ columns, rows, getRow, ensureRange, sort = [], onS
 
   const getCellContent = useCallback(
     ([col, row]: Item): GridCell => toGridCell(getRow(row)?.[col]),
-    [getRow],
+    // lang: numbers are formatted with the language's locale; a new identity repaints the grid
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    [getRow, lang],
   )
 
   const onVisibleRegionChanged = useCallback(
@@ -84,7 +88,7 @@ export function ExploreGrid({ columns, rows, getRow, ensureRange, sort = [], onS
     [ensureRange],
   )
 
-  // Clic en encabezado: sin orden → ascendente → descendente → sin orden (una columna a la vez)
+  // Header click: unsorted → ascending → descending → unsorted (one column at a time)
   const onHeaderClicked = useCallback(
     (col: number) => {
       const name = columns[col]?.name

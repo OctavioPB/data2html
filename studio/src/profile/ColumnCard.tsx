@@ -1,42 +1,50 @@
 import type { Schemas } from '../api/client'
+import { useT, type MessageKey } from '../i18n'
 import { BarList, Columns } from './charts'
 import { fmt, fmtCompact, fmtStat, pct } from './format'
 
 type Col = Schemas['ColumnProfile']
 
-const KIND_LABEL: Record<Col['kind'], string> = {
-  numeric: 'numérica',
-  temporal: 'fecha',
-  text: 'texto',
-  boolean: 'booleana',
-  other: 'otra',
+const KIND_LABEL: Record<Col['kind'], MessageKey> = {
+  numeric: 'kind.numeric',
+  temporal: 'kind.temporal',
+  text: 'kind.text',
+  boolean: 'kind.boolean',
+  other: 'kind.other',
 }
-const PERIOD_LABEL = { year: 'año', month: 'mes', day: 'día', hour: 'hora' } as const
+const PERIOD_LABEL: Record<NonNullable<Col['period_unit']>, MessageKey> = {
+  year: 'period.year',
+  month: 'period.month',
+  day: 'period.day',
+  hour: 'period.hour',
+}
 
 export function ColumnCard({ col }: { col: Col }) {
+  const t = useT()
+  const period = t(PERIOD_LABEL[col.period_unit ?? 'day'])
   return (
-    <article className="col-card" id={`perfil-${col.name}`}>
+    <article className="col-card" id={`profile-${col.name}`}>
       <header>
         <h3 className="mono">
           {col.computed && <span className="muted">ƒ </span>}
           {col.name}
         </h3>
         <span className="muted small">
-          {KIND_LABEL[col.kind]} · <span className="mono">{col.type}</span>
+          {t(KIND_LABEL[col.kind])} · <span className="mono">{col.type}</span>
         </span>
       </header>
 
       <dl className="stats">
         <div>
-          <dt>No nulos</dt>
+          <dt>{t('stat.nonNull')}</dt>
           <dd>{fmtCompact(col.non_null)}</dd>
         </div>
         <div>
-          <dt>Nulos</dt>
+          <dt>{t('stat.nulls')}</dt>
           <dd>{pct(col.nulls, col.nulls + col.non_null)}</dd>
         </div>
         <div>
-          <dt>Distintos</dt>
+          <dt>{t('stat.distinct')}</dt>
           <dd>{fmtCompact(col.distinct)}</dd>
         </div>
       </dl>
@@ -52,9 +60,9 @@ export function ColumnCard({ col }: { col: Col }) {
             <>
               <Columns
                 bars={col.periods.map((p) => ({ label: p.period, count: p.count }))}
-                ariaLabel={`Filas por ${PERIOD_LABEL[col.period_unit ?? 'day']} en ${col.name}`}
+                ariaLabel={t('profile.rowsPerPeriodOf', { period, name: col.name })}
               />
-              <p className="muted small">Filas por {PERIOD_LABEL[col.period_unit ?? 'day']}</p>
+              <p className="muted small">{t('profile.rowsPerPeriod', { period })}</p>
             </>
           )}
         </>
@@ -74,11 +82,14 @@ export function ColumnCard({ col }: { col: Col }) {
 }
 
 function TopValues({ col, top }: { col: Col; top: Schemas['ValueCount'][] }) {
+  const t = useT()
   const shown = top.slice(0, 8)
   const others = col.non_null - shown.reduce((s, v) => s + v.count, 0)
   const notes = [
-    others > 0 ? `Otros: ${pct(others, col.non_null)}` : null,
-    col.min_length !== null && col.min_length !== undefined ? `longitud ${col.min_length}–${col.max_length}` : null,
+    others > 0 ? t('profile.others', { pct: pct(others, col.non_null) }) : null,
+    col.min_length !== null && col.min_length !== undefined
+      ? t('profile.length', { min: col.min_length, max: col.max_length ?? '' })
+      : null,
   ].filter(Boolean)
   return (
     <>
@@ -89,13 +100,14 @@ function TopValues({ col, top }: { col: Col; top: Schemas['ValueCount'][] }) {
 }
 
 function NumericDetail({ col }: { col: Col }) {
+  const t = useT()
   const o = col.outliers
   const outliers = o ? o.below + o.above : 0
   return (
     <>
       <dl className="stats five">
         <div>
-          <dt>Mín</dt>
+          <dt>{t('stat.min')}</dt>
           <dd title={fmt(col.min as number | null)}>{fmtStat(col.min as number | null)}</dd>
         </div>
         <div>
@@ -103,7 +115,7 @@ function NumericDetail({ col }: { col: Col }) {
           <dd title={fmt(col.q1)}>{fmtStat(col.q1)}</dd>
         </div>
         <div>
-          <dt>Mediana</dt>
+          <dt>{t('stat.median')}</dt>
           <dd title={fmt(col.median)}>{fmtStat(col.median)}</dd>
         </div>
         <div>
@@ -111,23 +123,26 @@ function NumericDetail({ col }: { col: Col }) {
           <dd title={fmt(col.q3)}>{fmtStat(col.q3)}</dd>
         </div>
         <div>
-          <dt>Máx</dt>
+          <dt>{t('stat.max')}</dt>
           <dd title={fmt(col.max as number | null)}>{fmtStat(col.max as number | null)}</dd>
         </div>
       </dl>
       {col.histogram && (
         <Columns
           bars={col.histogram.map((b) => ({ label: `${fmt(b.start)} – ${fmt(b.end)}`, count: b.count }))}
-          ariaLabel={`Histograma de ${col.name}`}
+          ariaLabel={t('profile.histogramOf', { name: col.name })}
         />
       )}
       <p className="muted small">
-        Media {fmt(col.mean)} · desv. {fmt(col.std)}
+        {t('profile.meanStd', { mean: fmt(col.mean), std: fmt(col.std) })}
         {o && (
           <>
             {' '}
-            · {outliers === 0 ? 'sin atípicos' : `${fmtCompact(outliers)} atípicos (${pct(outliers, col.non_null)})`}
-            <span title={`Fuera de [${fmt(o.low_fence)}, ${fmt(o.high_fence)}] (1.5 × IQR)`}> ⓘ</span>
+            ·{' '}
+            {outliers === 0
+              ? t('profile.noOutliers')
+              : t('profile.outliers', { n: fmtCompact(outliers), pct: pct(outliers, col.non_null) })}
+            <span title={t('profile.outlierFences', { low: fmt(o.low_fence), high: fmt(o.high_fence) })}> ⓘ</span>
           </>
         )}
       </p>

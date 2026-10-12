@@ -1,13 +1,15 @@
 /**
- * Vista rápida de un resultado del editor SQL. NO produce report-spec ni se guarda: un visual publicable
- * sale del modelo semántico ("Publicar como medida…" en el editor). Dibuja la página ya agregada.
- * Marks limitados por `compat.allowed_marks` (vía /api/compat); render compartido en render/VisualChart.
+ * Quick view of a SQL editor result. It does NOT produce a report-spec and is not saved: a publishable
+ * visual comes from the semantic model ("Publish as measure…" in the editor). Draws the already
+ * aggregated page. Marks limited by `compat.allowed_marks` (via /api/compat); shared render/VisualChart.
  */
 import { useState } from 'react'
 
 import type { Schemas } from '../api/client'
 import { useCompat } from '../api/queries'
 import type { Cell, Column } from '../explore/usePagedRows'
+import { useT } from '../i18n'
+import { formatNumber } from '../i18n/format'
 import { MARK_LABEL } from '../render/labels'
 import { VisualChart } from '../render/VisualChart'
 
@@ -17,7 +19,6 @@ type ChartMark = Exclude<Mark, 'table'>
 
 const NUMERIC = /^(TINYINT|SMALLINT|INTEGER|BIGINT|HUGEINT|U\w*INT|FLOAT|DOUBLE|REAL|DECIMAL)/i
 const MAX_SERIES = 8
-const nf = new Intl.NumberFormat('es-MX')
 
 function fieldType(type: string): FieldType {
   if (/^(DATE|TIMESTAMP)/i.test(type)) return 'temporal'
@@ -32,6 +33,7 @@ interface Props {
 }
 
 export function QuickChart({ columns, rows, total }: Props) {
+  const t = useT()
   const numeric = columns.filter((c) => NUMERIC.test(c.type))
   const dims = columns.filter((c) => !NUMERIC.test(c.type))
   const [dim, setDim] = useState<string>(dims[0]?.name ?? '')
@@ -45,7 +47,7 @@ export function QuickChart({ columns, rows, total }: Props) {
   const active: ChartMark | null = mark && marks.includes(mark) ? mark : (marks[0] ?? null)
 
   if (numeric.length === 0) {
-    return <p className="muted">El resultado no tiene columnas numéricas que graficar.</p>
+    return <p className="muted">{t('quick.noNumeric')}</p>
   }
 
   const toggleMeasure = (name: string) =>
@@ -57,16 +59,16 @@ export function QuickChart({ columns, rows, total }: Props) {
     <div className="quick-chart">
       <div className="qc-controls">
         <label>
-          Dimensión{' '}
+          {t('quick.dimension')}{' '}
           <select value={dim} onChange={(e) => setDim(e.target.value)}>
-            <option value="">(ninguna)</option>
+            <option value="">{t('quick.none')}</option>
             {dims.map((c) => (
               <option key={c.name}>{c.name}</option>
             ))}
           </select>
         </label>
         <fieldset className="qc-measures">
-          <legend>Medidas</legend>
+          <legend>{t('quick.measures')}</legend>
           {numeric.map((c) => (
             <label key={c.name} className="inline">
               <input type="checkbox" checked={measures.includes(c.name)} onChange={() => toggleMeasure(c.name)} />
@@ -74,24 +76,25 @@ export function QuickChart({ columns, rows, total }: Props) {
             </label>
           ))}
         </fieldset>
-        <div className="seg" role="radiogroup" aria-label="Tipo de gráfico">
+        <div className="seg" role="radiogroup" aria-label={t('quick.chartType')}>
           {marks.map((m) => (
             <button key={m} role="radio" aria-checked={active === m} onClick={() => setMark(m)}>
-              {MARK_LABEL[m]}
+              {t(MARK_LABEL[m])}
             </button>
           ))}
         </div>
       </div>
       <p className="muted small">
-        Vista rápida, no se guarda. Para publicarla usa «Publicar como medida…».
-        {total !== null && total > rows.length && ` Muestra las primeras ${rows.length} de ${nf.format(total)} filas.`}
+        {t('quick.notSaved')}
+        {total !== null && total > rows.length &&
+          ` ${t('quick.firstRows', { n: rows.length, total: formatNumber(total) })}`}
       </p>
       {measures.length === 0 ? (
-        <p className="muted">Elige al menos una medida.</p>
+        <p className="muted">{t('quick.pickMeasure')}</p>
       ) : active ? (
         <VisualChart mark={active} columns={columns} rows={rows} dimension={dim || null} measures={measures} />
       ) : (
-        <p className="muted">Sin tipos de gráfico para esta combinación (solo tabla).</p>
+        <p className="muted">{t('quick.tableOnly')}</p>
       )}
     </div>
   )

@@ -14,20 +14,21 @@ import {
 } from '../api/queries'
 import { ExploreGrid } from '../explore/ExploreGrid'
 import { usePagedRows, type FetchPage } from '../explore/usePagedRows'
+import { useT } from '../i18n'
+import { formatNumber } from '../i18n/format'
 import { CodeEditor } from './CodeEditor'
 import { PromoteDialog } from './PromoteDialog'
-import { schemaFor } from './schema'
 import { QuickChart } from './QuickChart'
+import { schemaFor } from './schema'
 
-const nf = new Intl.NumberFormat('es-MX')
-const DRAFT_KEY = 'd2h.sql.draft' // comodidad por navegador; el historial real vive en el servidor
+const DRAFT_KEY = 'd2h.sql.draft' // per-browser convenience; the real history lives on the server
 
 function loadDraft(): { source: string; sql: string } {
   try {
     const raw = localStorage.getItem(DRAFT_KEY)
     if (raw) return JSON.parse(raw) as { source: string; sql: string }
   } catch {
-    /* almacenamiento no disponible: empezar vacío */
+    /* storage unavailable: start empty */
   }
   return { source: 'csv', sql: '' }
 }
@@ -40,6 +41,7 @@ interface Run {
 }
 
 export function SqlEditor() {
+  const t = useT()
   const qc = useQueryClient()
   const catalog = useCatalog()
   const [draft, setDraft] = useState(loadDraft)
@@ -53,7 +55,7 @@ export function SqlEditor() {
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
     } catch {
-      /* sin almacenamiento: el borrador no persiste, no pasa nada */
+      /* no storage: the draft does not persist, nothing else breaks */
     }
   }, [draft])
 
@@ -91,23 +93,23 @@ export function SqlEditor() {
       <div className="sql-main">
         <div className="sql-toolbar">
           <label>
-            Fuente{' '}
+            {t('sql.source')}{' '}
             <select value={source?.id ?? ''} onChange={(e) => setDraft({ ...draft, source: e.target.value })}>
               {sources.map((s) => (
                 <option key={s.id} value={s.id} disabled={s.status !== 'ok'}>
                   {s.id}
-                  {s.status !== 'ok' ? ' (sin conexión)' : ''}
+                  {s.status !== 'ok' ? ` ${t('sql.sourceOffline')}` : ''}
                 </option>
               ))}
             </select>
           </label>
           {running ? (
             <button className="btn primary" onClick={stop}>
-              ■ Detener
+              ■ {t('sql.stop')}
             </button>
           ) : (
             <button className="btn primary" onClick={execute} disabled={!draft.sql.trim() || !source}>
-              ▶ Ejecutar <span className="kbd">Ctrl+Enter</span>
+              ▶ {t('sql.run')} <span className="kbd">Ctrl+Enter</span>
             </button>
           )}
           <SaveButton source={source?.id ?? ''} sql={draft.sql} />
@@ -115,7 +117,8 @@ export function SqlEditor() {
             {running && <Elapsed since={run.startedAt} />}
             {!running && finished && run && finished.queryId === run.queryId && !result.error && (
               <>
-                {nf.format(result.total ?? 0)} filas · {(finished.elapsedMs / 1000).toFixed(2)} s
+                {t('common.rows', { n: formatNumber(result.total ?? 0) })} ·{' '}
+                {(finished.elapsedMs / 1000).toFixed(2)} s
               </>
             )}
           </span>
@@ -134,27 +137,27 @@ export function SqlEditor() {
           <div className="sql-results-head">
             <nav className="tabs" role="tablist">
               <button role="tab" aria-selected={view === 'result'} onClick={() => setView('result')}>
-                Resultado
+                {t('sql.result')}
               </button>
               <button role="tab" aria-selected={view === 'chart'} onClick={() => setView('chart')}>
-                Gráfico
+                {t('sql.chart')}
               </button>
             </nav>
             {result.firstPage && result.columns.length > 0 && run && (
               <span className="inline">
                 {view === 'result' && (
                   <button className="btn small" onClick={() => setView('chart')}>
-                    Crear visual
+                    {t('sql.createVisual')}
                   </button>
                 )}
-                <button className="btn small" onClick={() => setPromoting(true)} title="Definir la medida en el modelo semántico">
-                  Publicar como medida…
+                <button className="btn small" onClick={() => setPromoting(true)} title={t('sql.publishHint')}>
+                  {t('sql.publish')}
                 </button>
               </span>
             )}
           </div>
           {result.error && <p className="error">{result.error}</p>}
-          {!run && <p className="muted">Escribe una consulta y ejecútala con Ctrl+Enter.</p>}
+          {!run && <p className="muted">{t('sql.empty')}</p>}
           {view === 'result' && result.columns.length > 0 && (
             <div className="grid-wrap">
               <div className="grid-fill">
@@ -181,10 +184,10 @@ export function SqlEditor() {
       <aside className="sql-side">
         <nav className="tabs" role="tablist">
           <button role="tab" aria-selected={side === 'history'} onClick={() => setSide('history')}>
-            Historial
+            {t('sql.history')}
           </button>
           <button role="tab" aria-selected={side === 'saved'} onClick={() => setSide('saved')}>
-            Guardadas
+            {t('sql.saved')}
           </button>
         </nav>
         {side === 'history' ? (
@@ -199,22 +202,24 @@ export function SqlEditor() {
 }
 
 function Elapsed({ since }: { since: number }) {
+  const t = useT()
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 100)
-    return () => clearInterval(t)
+    const timer = setInterval(() => setNow(Date.now()), 100)
+    return () => clearInterval(timer)
   }, [])
-  return <>Ejecutando… {((now - since) / 1000).toFixed(1)} s</>
+  return <>{t('sql.running', { s: ((now - since) / 1000).toFixed(1) })}</>
 }
 
 function SaveButton({ source, sql }: { source: string; sql: string }) {
+  const t = useT()
   const save = useSaveQuery()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   if (!open) {
     return (
       <button className="btn" onClick={() => setOpen(true)} disabled={!sql.trim()}>
-        Guardar…
+        {t('sql.saveAs')}
       </button>
     )
   }
@@ -226,12 +231,18 @@ function SaveButton({ source, sql }: { source: string; sql: string }) {
         save.mutate({ name: name.trim(), source, sql }, { onSuccess: () => setOpen(false) })
       }}
     >
-      <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre" maxLength={80} />
+      <input
+        autoFocus
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder={t('sql.namePlaceholder')}
+        maxLength={80}
+      />
       <button className="btn small primary" disabled={!name.trim() || save.isPending}>
-        Guardar
+        {t('common.save')}
       </button>
       <button type="button" className="btn small ghost" onClick={() => setOpen(false)}>
-        Cancelar
+        {t('common.cancel')}
       </button>
       {save.isError && <span className="error small">{save.error.message}</span>}
     </form>
@@ -239,8 +250,9 @@ function SaveButton({ source, sql }: { source: string; sql: string }) {
 }
 
 function HistoryList({ onPick }: { onPick: (e: { source: string; sql: string }) => void }) {
+  const t = useT()
   const { data } = useSqlHistory()
-  if (!data?.length) return <p className="muted small">Aún no hay consultas.</p>
+  if (!data?.length) return <p className="muted small">{t('sql.noHistory')}</p>
   return (
     <ul className="query-list">
       {data.map((e, i) => (
@@ -248,7 +260,8 @@ function HistoryList({ onPick }: { onPick: (e: { source: string; sql: string }) 
           <button onClick={() => onPick(e)} title={e.error ?? e.sql}>
             <code>{e.sql.slice(0, 140)}</code>
             <span className={e.ok ? 'muted small' : 'error small'}>
-              {e.source} · {e.ok ? `${nf.format(e.rows ?? 0)} filas` : (e.error ?? 'error').slice(0, 60)} ·{' '}
+              {e.source} ·{' '}
+              {e.ok ? t('common.rows', { n: formatNumber(e.rows ?? 0) }) : (e.error ?? t('sql.error')).slice(0, 60)} ·{' '}
               {(e.elapsed_ms / 1000).toFixed(2)} s
             </span>
           </button>
@@ -259,9 +272,10 @@ function HistoryList({ onPick }: { onPick: (e: { source: string; sql: string }) 
 }
 
 function SavedList({ onPick }: { onPick: (q: { source: string; sql: string }) => void }) {
+  const t = useT()
   const { data } = useSavedQueries()
   const del = useDeleteSaved()
-  if (!data?.length) return <p className="muted small">Sin consultas guardadas.</p>
+  if (!data?.length) return <p className="muted small">{t('sql.noSaved')}</p>
   return (
     <ul className="query-list">
       {data.map((q) => (
@@ -270,7 +284,7 @@ function SavedList({ onPick }: { onPick: (q: { source: string; sql: string }) =>
             <strong>{q.name}</strong>
             <span className="muted small">{q.source}</span>
           </button>
-          <button className="chip-x" aria-label={`Borrar ${q.name}`} onClick={() => del.mutate(q.name)}>
+          <button className="chip-x" aria-label={t('common.delete', { name: q.name })} onClick={() => del.mutate(q.name)}>
             ✕
           </button>
         </li>

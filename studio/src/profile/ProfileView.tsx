@@ -2,11 +2,11 @@ import { useState } from 'react'
 
 import type { Schemas } from '../api/client'
 import { useProfile, useRefreshProfile } from '../api/queries'
+import { useT } from '../i18n'
+import { formatDateTime } from '../i18n/format'
 import { CorrelationMatrix } from './charts'
-import { fmtCompact } from './format'
 import { ColumnCard } from './ColumnCard'
-
-const nf = new Intl.NumberFormat('es-MX')
+import { fmtCompact, fmtNumber } from './format'
 
 interface Props {
   source: string
@@ -14,6 +14,7 @@ interface Props {
 }
 
 export function ProfileView({ source, table }: Props) {
+  const t = useT()
   const computedKey = table.computed.map((c) => `${c.name}=${c.expr}`).join('|')
   const { data, isPending, isError, error, cancel, refetch } = useProfile(source, table.name, computedKey)
   const refresh = useRefreshProfile(source, table.name, computedKey)
@@ -22,9 +23,9 @@ export function ProfileView({ source, table }: Props) {
   if (isPending) {
     return (
       <div className="profile-head">
-        <p className="muted">Perfilando… (en tablas grandes puede tardar unos segundos)</p>
+        <p className="muted">{t('profile.running')}</p>
         <button className="btn small" onClick={cancel}>
-          Cancelar
+          {t('common.cancel')}
         </button>
       </div>
     )
@@ -34,45 +35,44 @@ export function ProfileView({ source, table }: Props) {
       <div className="profile-head">
         <p className="error">{error.message}</p>
         <button className="btn small" onClick={() => void refetch()}>
-          Reintentar
+          {t('common.retry')}
         </button>
       </div>
     )
   }
 
   const flagged = data.columns.filter((c) => c.warnings.length > 0)
+  const rows = fmtNumber(data.rows)
 
   return (
     <div className="profile">
       <div className="profile-head">
         {data.sampled ? (
           <p className="sample-banner" role="note">
-            <strong>Muestra:</strong> perfil calculado sobre {nf.format(data.rows)} filas al azar de una
-            fuente remota. Los conteos y distintos son de la muestra, no de la tabla completa.
+            <strong>{t('profile.sampleTitle')}</strong> {t('profile.sampleBody', { n: rows })}
           </p>
         ) : (
           <p className="muted small">
-            Perfil de las {nf.format(data.rows)} filas
-            {data.sample_size ? ' (la tabla completa cupo en la muestra)' : ''}.
+            {data.sample_size ? t('profile.allRowsFitSample', { n: rows }) : t('profile.allRows', { n: rows })}
           </p>
         )}
         <span className="muted small">
-          {(data.elapsed_ms / 1000).toFixed(1)} s · {new Date(data.profiled_at).toLocaleString('es-MX')}
+          {(data.elapsed_ms / 1000).toFixed(1)} s · {formatDateTime(data.profiled_at)}
         </span>
         <button className="btn small" onClick={() => refresh.mutate()} disabled={refresh.isPending}>
-          {refresh.isPending ? 'Recalculando…' : 'Recalcular'}
+          {refresh.isPending ? t('profile.recomputing') : t('profile.recompute')}
         </button>
       </div>
 
       {flagged.length > 0 && (
         <section className="profile-warnings">
-          <h3>Avisos</h3>
+          <h3>{t('profile.warnings')}</h3>
           <ul>
             {flagged.flatMap((c) =>
               c.warnings.map((w) => (
                 <li key={`${c.name}-${w.code}`}>
                   <span aria-hidden>⚠</span>{' '}
-                  <a href={`#perfil-${c.name}`} onClick={(e) => jump(e, c.name)} className="mono">
+                  <a href={`#profile-${c.name}`} onClick={(e) => jump(e, c.name)} className="mono">
                     {c.name}
                   </a>
                   : {w.message}
@@ -92,8 +92,8 @@ export function ProfileView({ source, table }: Props) {
       {data.correlations && (
         <section className="profile-corr">
           <header>
-            <h3>Correlaciones</h3>
-            <div className="seg" role="radiogroup" aria-label="Método">
+            <h3>{t('profile.correlations')}</h3>
+            <div className="seg" role="radiogroup" aria-label={t('profile.method')}>
               {(['pearson', 'spearman'] as const).map((m) => (
                 <button key={m} role="radio" aria-checked={method === m} onClick={() => setMethod(m)}>
                   {m === 'pearson' ? 'Pearson' : 'Spearman'}
@@ -102,7 +102,8 @@ export function ProfileView({ source, table }: Props) {
             </div>
             <span className="muted small">
               n = {fmtCompact(data.correlations.n)}
-              {data.correlations.n < data.rows ? ' (muestra)' : ''} · {method === 'pearson' ? 'relación lineal' : 'relación monótona (rangos)'}
+              {data.correlations.n < data.rows ? ` ${t('profile.sampleSuffix')}` : ''} ·{' '}
+              {method === 'pearson' ? t('profile.linear') : t('profile.monotonic')}
             </span>
           </header>
           <CorrelationMatrix columns={data.correlations.columns} values={data.correlations[method]} />
@@ -112,8 +113,8 @@ export function ProfileView({ source, table }: Props) {
   )
 }
 
-/** El hash de la URL es la tabla abierta: el salto a una columna no debe tocarlo. */
+/** The URL hash is the open table: jumping to a column must not touch it. */
 function jump(e: React.MouseEvent, name: string) {
   e.preventDefault()
-  document.getElementById(`perfil-${name}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  document.getElementById(`profile-${name}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }

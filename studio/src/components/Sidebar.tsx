@@ -1,7 +1,10 @@
 import { useCatalog } from '../api/queries'
+import { useT } from '../i18n'
+import { formatNumber } from '../i18n/format'
 import { useStudio } from '../store'
 
 export function Sidebar() {
+  const t = useT()
   const { data, isPending, isError } = useCatalog()
   const selected = useStudio((s) => s.selected)
   const select = useStudio((s) => s.select)
@@ -12,22 +15,22 @@ export function Sidebar() {
 
   return (
     <aside className="sidebar">
-      <nav className="nav-group" aria-label="Herramientas">
+      <nav className="nav-group" aria-label={t('nav.tools')}>
         <button className="nav-item" aria-pressed={view === 'sql'} onClick={openSql}>
-          <span aria-hidden>⌨</span> Editor SQL
+          <span aria-hidden>⌨</span> {t('nav.sqlEditor')}
         </button>
         <button className="nav-item" aria-pressed={view === 'models'} onClick={() => openModels()}>
-          <span aria-hidden>Σ</span> Modelos y visuales
+          <span aria-hidden>Σ</span> {t('nav.models')}
         </button>
       </nav>
       <div className="sidebar-head">
-        <h2>Fuentes</h2>
+        <h2>{t('sidebar.sources')}</h2>
         <button className="btn small" onClick={() => setUploading(true)}>
-          + CSV
+          {t('sidebar.addCsv')}
         </button>
       </div>
-      {isPending && <p className="muted">Cargando…</p>}
-      {isError && <p className="muted">No se pudo leer el catálogo.</p>}
+      {isPending && <p className="muted">{t('common.loading')}</p>}
+      {isError && <p className="muted">{t('sidebar.catalogError')}</p>}
       {data?.sources.map((src) => (
         <section key={src.id} className="source">
           <h3>
@@ -35,25 +38,25 @@ export function Sidebar() {
           </h3>
           {src.status === 'error' && (
             <p className="error small" title={src.error ?? undefined}>
-              Sin conexión: {src.error}
+              {t('sidebar.offline', { error: src.error ?? '' })}
             </p>
           )}
           {src.status === 'ok' && src.tables.length === 0 && (
-            <p className="muted small">{src.kind === 'csv' ? 'Sin tablas. Sube un CSV.' : 'Sin tablas visibles.'}</p>
+            <p className="muted small">{src.kind === 'csv' ? t('sidebar.noCsvTables') : t('sidebar.noTables')}</p>
           )}
           <ul>
-            {src.tables.map((t) => {
-              const active = view === 'table' && selected?.source === src.id && selected.table === t.name
+            {src.tables.map((tbl) => {
+              const active = view === 'table' && selected?.source === src.id && selected.table === tbl.name
               return (
-                <li key={t.name}>
+                <li key={tbl.name}>
                   <button
                     className="table-item"
                     aria-pressed={active}
-                    title={t.description || undefined}
-                    onClick={() => select({ source: src.id, table: t.name })}
+                    title={tbl.description || undefined}
+                    onClick={() => select({ source: src.id, table: tbl.name })}
                   >
-                    {t.name}
-                    <span className="muted small">{t.row_count?.toLocaleString('es-MX') ?? ''}</span>
+                    {tbl.name}
+                    <span className="muted small">{tbl.row_count !== null ? formatNumber(tbl.row_count) : ''}</span>
                   </button>
                 </li>
               )

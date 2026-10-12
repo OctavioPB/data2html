@@ -1,12 +1,14 @@
 import { useState } from 'react'
 
 import { useCatalog, useModels } from '../api/queries'
+import { useT } from '../i18n'
 import { useStudio } from '../store'
 import { Builder } from './Builder'
 import { toDraft, type ModelDraft } from './draft'
 import { ModelEditor } from './ModelEditor'
 
 export function ModelsView() {
+  const t = useT()
   const { data, isPending, isError, error } = useModels()
   const catalog = useCatalog()
   const name = useStudio((s) => s.model)
@@ -14,7 +16,7 @@ export function ModelsView() {
   const openModels = useStudio((s) => s.openModels)
   const [tab, setTab] = useState<'builder' | 'definition'>('builder')
 
-  if (isPending) return <p className="muted">Cargando modelos…</p>
+  if (isPending) return <p className="muted">{t('models.loading')}</p>
   if (isError) return <p className="error">{error.message}</p>
 
   const entry = data.models.find((m) => m.model.name === name)
@@ -27,7 +29,7 @@ export function ModelsView() {
     <div className="models-view">
       <aside className="model-list">
         <button className="btn small primary" onClick={() => openModels('')}>
-          + Nuevo modelo
+          {t('models.new')}
         </button>
         <ul>
           {data.models.map((m) => (
@@ -37,51 +39,54 @@ export function ModelsView() {
                 <span className="muted small">
                   {m.model.source} · {m.model.table}
                 </span>
-                {m.errors.length > 0 && <span className="error small">⚠ {m.errors.length} problema(s)</span>}
+                {m.errors.length > 0 && (
+                  <span className="error small">⚠ {t('models.problems', { n: m.errors.length })}</span>
+                )}
               </button>
             </li>
           ))}
         </ul>
         {Object.entries(data.broken).map(([file, err]) => (
           <p key={file} className="error small" title={err}>
-            ⚠ {file} no valida
+            ⚠ {t('models.broken', { file })}
           </p>
         ))}
-        {data.models.length === 0 && <p className="muted small">Sin modelos todavía.</p>}
+        {data.models.length === 0 && <p className="muted small">{t('models.none')}</p>}
       </aside>
 
       <section className="model-main">
         {name === null && (
           <div className="muted">
-            <p>Un modelo semántico define, una sola vez, las dimensiones y medidas de una tabla.</p>
-            <p>Los visuales solo nombran medidas: así un número es el mismo en todos los reportes.</p>
+            <p>{t('models.intro1')}</p>
+            <p>{t('models.intro2')}</p>
           </div>
         )}
-        {name !== null && !isNew && !entry && <p className="error">El modelo '{name}' no existe.</p>}
+        {name !== null && !isNew && !entry && <p className="error">{t('models.missing', { name })}</p>}
         {(isNew || entry) && (
           <>
             <header className="table-head">
-              <h2>{isNew ? 'Nuevo modelo' : name}</h2>
+              <h2>{isNew ? t('models.newTitle') : name}</h2>
               {entry && (
                 <span className="muted">
-                  {entry.model.source} · {entry.model.table} · {Object.keys(entry.model.dimensions).length} dimensiones ·{' '}
-                  {Object.keys(entry.model.measures).length} medidas
+                  {entry.model.source} · {entry.model.table} ·{' '}
+                  {t('models.counts', {
+                    dims: Object.keys(entry.model.dimensions).length,
+                    measures: Object.keys(entry.model.measures).length,
+                  })}
                 </span>
               )}
               {!isNew && (
                 <nav className="tabs" role="tablist">
                   <button role="tab" aria-selected={active === 'builder'} onClick={() => setTab('builder')} disabled={Boolean(entry?.errors.length)}>
-                    Constructor
+                    {t('models.tab.builder')}
                   </button>
                   <button role="tab" aria-selected={active === 'definition'} onClick={() => setTab('definition')}>
-                    Definición
+                    {t('models.tab.definition')}
                   </button>
                 </nav>
               )}
             </header>
-            {entry && entry.errors.length > 0 && (
-              <p className="error small">El modelo tiene problemas contra la fuente; corrígelos para usar el constructor.</p>
-            )}
+            {entry && entry.errors.length > 0 && <p className="error small">{t('models.fixFirst')}</p>}
             {active === 'builder' && entry ? (
               <Builder key={`${entry.model.name}-${JSON.stringify(preset)}`} model={entry.model} preset={preset} />
             ) : (

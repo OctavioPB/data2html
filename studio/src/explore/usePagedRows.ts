@@ -13,7 +13,7 @@ export interface Page {
   total?: number | null
 }
 
-/** Trae una página. `withTotal` solo en la primera; `signal` se aborta al cambiar de consulta. */
+/** Fetch one page. `withTotal` only for the first; `signal` aborts when the query changes. */
 export type FetchPage = (offset: number, limit: number, withTotal: boolean, signal: AbortSignal) => Promise<Page>
 
 interface Snapshot {
@@ -23,7 +23,7 @@ interface Snapshot {
   error: string | null
 }
 
-/** Páginas de UNA consulta. Cambiar la consulta = otra instancia (y abortar la anterior). */
+/** Pages of ONE query. A different query = another instance (and the previous one is aborted). */
 class PageStore {
   private snap: Snapshot = { pages: new Map(), columns: [], total: null, error: null }
   private inflight = new Set<number>()
@@ -56,7 +56,7 @@ class PageStore {
 
   fetchPage(page: number) {
     if (this.snap.pages.has(page) || this.inflight.has(page)) return
-    if (this.ctrl.signal.aborted) this.ctrl = new AbortController() // StrictMode monta el efecto dos veces
+    if (this.ctrl.signal.aborted) this.ctrl = new AbortController() // StrictMode mounts the effect twice
     const signal = this.ctrl.signal
     this.inflight.add(page)
     this.fetcher(page * PAGE_SIZE, PAGE_SIZE, page === 0, signal)
@@ -75,12 +75,12 @@ class PageStore {
 }
 
 /**
- * Filas bajo demanda: el grid pide el rango visible y aquí se traen las páginas de PAGE_SIZE que falten.
- * Un `fetcher` nuevo (memoizado por quien llama) descarta todo y cancela lo pendiente; `null` = sin consulta.
+ * Rows on demand: the grid asks for the visible range and the missing PAGE_SIZE pages are fetched here.
+ * A new `fetcher` (memoized by the caller) discards everything and cancels what is pending; `null` = no query.
  */
 export function usePagedRows(fetcher: FetchPage | null) {
   const store = useMemo(() => (fetcher ? new PageStore(fetcher) : null), [fetcher])
-  const empty = useMemo(() => new PageStore(() => Promise.reject(new Error('sin consulta'))), [])
+  const empty = useMemo(() => new PageStore(() => Promise.reject(new Error('no query'))), [])
   const active = store ?? empty
   const snap = useSyncExternalStore(active.subscribe, active.getSnapshot)
 

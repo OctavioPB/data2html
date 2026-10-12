@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import type { Schemas } from '../api/client'
 import { useCatalog, useCheckModel, useDeleteModel, useSaveModel } from '../api/queries'
+import { useT, type MessageKey } from '../i18n'
 import { useStudio } from '../store'
 import {
   fromDraft,
@@ -16,24 +17,24 @@ import {
 } from './draft'
 
 const TYPES: Schemas['FieldType'][] = ['nominal', 'ordinal', 'temporal', 'quantitative']
-const TYPE_LABEL: Record<Schemas['FieldType'], string> = {
-  nominal: 'nominal (categorías)',
-  ordinal: 'ordinal (con orden)',
-  temporal: 'temporal (fecha)',
-  quantitative: 'cuantitativa',
+const TYPE_LABEL: Record<Schemas['FieldType'], MessageKey> = {
+  nominal: 'fieldType.nominal',
+  ordinal: 'fieldType.ordinal',
+  temporal: 'fieldType.temporal',
+  quantitative: 'fieldType.quantitative',
 }
-const FORMATS: { v: Schemas['MeasureFormat']; label: string }[] = [
-  { v: 'number', label: 'número' },
-  { v: 'currency', label: 'moneda' },
-  { v: 'percent', label: 'porcentaje' },
+const FORMATS: { v: Schemas['MeasureFormat']; label: MessageKey }[] = [
+  { v: 'number', label: 'format.number' },
+  { v: 'currency', label: 'format.currency' },
+  { v: 'percent', label: 'format.percent' },
 ]
 
-/** Espera `ms` sin cambios antes de devolver el valor (validación en vivo sin una petición por tecla). */
+/** Wait `ms` without changes before returning the value (live validation without a request per keystroke). */
 function useDebounced<T>(value: T, ms: number): T {
   const [v, setV] = useState(value)
   useEffect(() => {
-    const t = setTimeout(() => setV(value), ms)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setV(value), ms)
+    return () => clearTimeout(timer)
   }, [value, ms])
   return v
 }
@@ -44,6 +45,7 @@ interface Props {
 }
 
 export function ModelEditor({ initial, isNew }: Props) {
+  const t = useT()
   const [d, setD] = useState<ModelDraft>(initial)
   const catalog = useCatalog()
   const save = useSaveModel()
@@ -52,7 +54,7 @@ export function ModelEditor({ initial, isNew }: Props) {
 
   const sources = catalog.data?.sources ?? []
   const tables = sources.find((s) => s.id === d.source)?.tables ?? []
-  const table = tables.find((t) => t.name === d.table)
+  const table = tables.find((x) => x.name === d.table)
   const columns = table?.columns ?? []
 
   const local = localErrors(d)
@@ -82,7 +84,7 @@ export function ModelEditor({ initial, isNew }: Props) {
     set({
       measures: [
         ...d.measures,
-        { key: nextKey(), name: `medida_${d.measures.length + 1}`, sql: 'COUNT(*)', format: 'number', owner: '', description: '' },
+        { key: nextKey(), name: `measure_${d.measures.length + 1}`, sql: 'COUNT(*)', format: 'number', owner: '', description: '' },
       ],
     })
 
@@ -96,7 +98,7 @@ export function ModelEditor({ initial, isNew }: Props) {
     >
       <section className="me-head">
         <label className="field">
-          <span>Nombre</span>
+          <span>{t('model.name')}</span>
           <input
             className="mono"
             value={d.name}
@@ -106,7 +108,7 @@ export function ModelEditor({ initial, isNew }: Props) {
           />
         </label>
         <label className="field">
-          <span>Fuente</span>
+          <span>{t('sql.source')}</span>
           <select value={d.source} onChange={(e) => set({ source: e.target.value, table: '' })}>
             {sources.map((s) => (
               <option key={s.id} value={s.id} disabled={s.status !== 'ok'}>
@@ -116,11 +118,11 @@ export function ModelEditor({ initial, isNew }: Props) {
           </select>
         </label>
         <label className="field">
-          <span>Tabla</span>
+          <span>{t('model.table')}</span>
           <select value={d.table} onChange={(e) => set({ table: e.target.value })}>
-            <option value="">(elige)</option>
-            {tables.map((t) => (
-              <option key={t.name}>{t.name}</option>
+            <option value="">{t('model.pick')}</option>
+            {tables.map((x) => (
+              <option key={x.name}>{x.name}</option>
             ))}
           </select>
         </label>
@@ -128,23 +130,23 @@ export function ModelEditor({ initial, isNew }: Props) {
 
       <section>
         <header className="me-section-head">
-          <h3>Dimensiones</h3>
+          <h3>{t('model.dimensions')}</h3>
           <button type="button" className="btn small" onClick={() => addDims(unusedColumns.slice(0, 1))} disabled={!unusedColumns.length}>
-            + Dimensión
+            {t('model.addDimension')}
           </button>
           {unusedColumns.length > 1 && (
             <button type="button" className="btn small ghost" onClick={() => addDims(unusedColumns)}>
-              + Todas las columnas
+              {t('model.addAllColumns')}
             </button>
           )}
         </header>
         <table className="grid me-table">
           <thead>
             <tr>
-              <th>Nombre</th>
-              <th>Columna</th>
-              <th>Tipo</th>
-              <th>Descripción</th>
+              <th>{t('model.name')}</th>
+              <th>{t('schema.column')}</th>
+              <th>{t('schema.type')}</th>
+              <th>{t('schema.description')}</th>
               <th />
             </tr>
           </thead>
@@ -152,10 +154,10 @@ export function ModelEditor({ initial, isNew }: Props) {
             {d.dimensions.map((x) => (
               <tr key={x.key}>
                 <td>
-                  <input className="mono" value={x.name} onChange={(e) => setDim(x.key, { name: e.target.value })} aria-invalid={!IDENT.test(x.name)} aria-label="Nombre de la dimensión" />
+                  <input className="mono" value={x.name} onChange={(e) => setDim(x.key, { name: e.target.value })} aria-invalid={!IDENT.test(x.name)} aria-label={t('model.dimensionName')} />
                 </td>
                 <td>
-                  <select value={x.column} onChange={(e) => setDim(x.key, { column: e.target.value })} aria-label="Columna">
+                  <select value={x.column} onChange={(e) => setDim(x.key, { column: e.target.value })} aria-label={t('schema.column')}>
                     {!columns.some((c) => c.name === x.column) && <option>{x.column}</option>}
                     {columns.map((c) => (
                       <option key={c.name}>{c.name}</option>
@@ -163,19 +165,19 @@ export function ModelEditor({ initial, isNew }: Props) {
                   </select>
                 </td>
                 <td>
-                  <select value={x.type} onChange={(e) => setDim(x.key, { type: e.target.value as Schemas['FieldType'] })} aria-label="Tipo">
-                    {TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {TYPE_LABEL[t]}
+                  <select value={x.type} onChange={(e) => setDim(x.key, { type: e.target.value as Schemas['FieldType'] })} aria-label={t('schema.type')}>
+                    {TYPES.map((ty) => (
+                      <option key={ty} value={ty}>
+                        {t(TYPE_LABEL[ty])}
                       </option>
                     ))}
                   </select>
                 </td>
                 <td>
-                  <input value={x.description} onChange={(e) => setDim(x.key, { description: e.target.value })} aria-label="Descripción" />
+                  <input value={x.description} onChange={(e) => setDim(x.key, { description: e.target.value })} aria-label={t('schema.description')} />
                 </td>
                 <td>
-                  <button type="button" className="chip-x" aria-label={`Quitar ${x.name}`} onClick={() => set({ dimensions: d.dimensions.filter((y) => y.key !== x.key) })}>
+                  <button type="button" className="chip-x" aria-label={t('common.remove', { name: x.name })} onClick={() => set({ dimensions: d.dimensions.filter((y) => y.key !== x.key) })}>
                     ✕
                   </button>
                 </td>
@@ -187,27 +189,27 @@ export function ModelEditor({ initial, isNew }: Props) {
 
       <section>
         <header className="me-section-head">
-          <h3>Medidas</h3>
+          <h3>{t('model.measures')}</h3>
           <button type="button" className="btn small" onClick={addMeasure}>
-            + Medida
+            {t('model.addMeasure')}
           </button>
-          <span className="muted small">Una expresión agregada sobre columnas de la tabla, p. ej. SUM(monto - descuento).</span>
+          <span className="muted small">{t('model.measureHint')}</span>
         </header>
         <div className="me-measures">
           {d.measures.map((m) => (
             <fieldset key={m.key} className="me-measure">
-              <input className="mono" value={m.name} onChange={(e) => setMeasure(m.key, { name: e.target.value })} aria-invalid={!IDENT.test(m.name)} aria-label="Nombre de la medida" />
-              <input className="mono me-sql" value={m.sql} onChange={(e) => setMeasure(m.key, { sql: e.target.value })} aria-label="SQL de la medida" spellCheck={false} />
-              <select value={m.format} onChange={(e) => setMeasure(m.key, { format: e.target.value as Schemas['MeasureFormat'] })} aria-label="Formato">
+              <input className="mono" value={m.name} onChange={(e) => setMeasure(m.key, { name: e.target.value })} aria-invalid={!IDENT.test(m.name)} aria-label={t('model.measureName')} />
+              <input className="mono me-sql" value={m.sql} onChange={(e) => setMeasure(m.key, { sql: e.target.value })} aria-label={t('model.measureSql')} spellCheck={false} />
+              <select value={m.format} onChange={(e) => setMeasure(m.key, { format: e.target.value as Schemas['MeasureFormat'] })} aria-label={t('measure.format')}>
                 {FORMATS.map((f) => (
                   <option key={f.v} value={f.v}>
-                    {f.label}
+                    {t(f.label)}
                   </option>
                 ))}
               </select>
-              <input value={m.owner} placeholder="dueño (área)" onChange={(e) => setMeasure(m.key, { owner: e.target.value })} aria-label="Dueño" aria-invalid={!m.owner.trim()} />
-              <input className="me-desc" value={m.description} placeholder="¿qué mide y qué excluye?" onChange={(e) => setMeasure(m.key, { description: e.target.value })} aria-label="Descripción" aria-invalid={!m.description.trim()} />
-              <button type="button" className="chip-x" aria-label={`Quitar ${m.name}`} onClick={() => set({ measures: d.measures.filter((y) => y.key !== m.key) })}>
+              <input value={m.owner} placeholder={t('model.ownerPlaceholder')} onChange={(e) => setMeasure(m.key, { owner: e.target.value })} aria-label={t('model.owner')} aria-invalid={!m.owner.trim()} />
+              <input className="me-desc" value={m.description} placeholder={t('model.descriptionPlaceholder')} onChange={(e) => setMeasure(m.key, { description: e.target.value })} aria-label={t('schema.description')} aria-invalid={!m.description.trim()} />
+              <button type="button" className="chip-x" aria-label={t('common.remove', { name: m.name })} onClick={() => set({ measures: d.measures.filter((y) => y.key !== m.key) })}>
                 ✕
               </button>
             </fieldset>
@@ -217,41 +219,41 @@ export function ModelEditor({ initial, isNew }: Props) {
 
       <section>
         <header className="me-section-head">
-          <h3>Seguridad por fila (RLS)</h3>
+          <h3>{t('model.rls')}</h3>
           <label className="inline small">
             <input
               type="checkbox"
               checked={d.rls !== null}
               onChange={(e) => set({ rls: e.target.checked ? { column: columns[0]?.name ?? '', claim: 'groups' } : null })}
             />
-            filtrar por la identidad del lector
+            {t('model.rlsToggle')}
           </label>
         </header>
         {d.rls && (
           <p className="small">
-            Cada lector ve solo las filas donde{' '}
-            <select value={d.rls.column} onChange={(e) => set({ rls: { ...d.rls!, column: e.target.value } })} aria-label="Columna RLS">
+            {t('model.rlsStart')}{' '}
+            <select value={d.rls.column} onChange={(e) => set({ rls: { ...d.rls!, column: e.target.value } })} aria-label={t('model.rlsColumn')}>
               {columns.map((c) => (
                 <option key={c.name}>{c.name}</option>
               ))}
             </select>{' '}
-            esté en su{' '}
-            <select value={d.rls.claim} onChange={(e) => set({ rls: { ...d.rls!, claim: e.target.value } })} aria-label="Atributo de identidad">
-              <option value="groups">grupos</option>
+            {t('model.rlsMiddle')}{' '}
+            <select value={d.rls.claim} onChange={(e) => set({ rls: { ...d.rls!, claim: e.target.value } })} aria-label={t('model.rlsClaim')}>
+              <option value="groups">{t('claim.groups')}</option>
               <option value="email">email</option>
-              <option value="user_id">usuario</option>
+              <option value="user_id">{t('claim.userId')}</option>
             </select>
-            . En el studio (autor) se ve todo.
+            {t('model.rlsEnd')}
           </p>
         )}
       </section>
 
       <section className="me-status" aria-live="polite">
-        {local.length > 0 && <ErrorList title="Antes de validar" errors={local} />}
-        {local.length === 0 && check.isFetching && <p className="muted small">Validando contra la fuente…</p>}
-        {shapeError && <ErrorList title="El contrato rechaza el modelo" errors={[shapeError]} />}
-        {!check.isFetching && serverErrors.length > 0 && <ErrorList title="Contra la fuente" errors={serverErrors} />}
-        {canSave && <p className="ok small">✓ El modelo es válido y todas las medidas corren contra la fuente.</p>}
+        {local.length > 0 && <ErrorList title={t('model.beforeValidating')} errors={local} />}
+        {local.length === 0 && check.isFetching && <p className="muted small">{t('model.validating')}</p>}
+        {shapeError && <ErrorList title={t('model.contractRejects')} errors={[shapeError]} />}
+        {!check.isFetching && serverErrors.length > 0 && <ErrorList title={t('model.againstSource')} errors={serverErrors} />}
+        {canSave && <p className="ok small">✓ {t('model.valid')}</p>}
       </section>
 
       <div className="actions">
@@ -261,16 +263,16 @@ export function ModelEditor({ initial, isNew }: Props) {
             type="button"
             className="btn ghost"
             onClick={() => {
-              if (window.confirm(`¿Borrar el modelo '${d.name}'? El YAML se elimina de content/semantic/.`)) {
+              if (window.confirm(t('model.confirmDelete', { name: d.name }))) {
                 del.mutate(d.name, { onSuccess: () => openModels(null) })
               }
             }}
           >
-            Borrar
+            {t('model.delete')}
           </button>
         )}
         <button className="btn primary" disabled={!canSave || save.isPending}>
-          {save.isPending ? 'Guardando…' : 'Guardar modelo'}
+          {save.isPending ? t('common.saving') : t('model.save')}
         </button>
       </div>
     </form>
