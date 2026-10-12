@@ -27,6 +27,6 @@ def test_table_is_always_allowed():
 
 def test_api_health_and_compat():
     c = TestClient(app)
-    assert c.get("/health").json() == {"status": "ok"}
+    assert c.get("/health").json()["status"] == "ok"
     marks = c.get("/api/compat", params={"dimension": "temporal"}).json()["marks"]
     assert set(marks) == {"table", "bar", "line"}

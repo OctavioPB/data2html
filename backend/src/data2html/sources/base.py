@@ -47,8 +47,12 @@ class DataSource(Protocol):
         *,
         identity: Identity | None,
         timeout_s: int,
+        query_id: str | None = None,
     ) -> pa.Table:
-        """Ejecuta un único SELECT ya validado y transpilado. Aplica RLS con `identity`."""
+        """Ejecuta un único SELECT ya validado y transpilado. Aplica RLS con `identity`.
+
+        `query_id` permite cancelarla desde otro hilo con `cancel(query_id)`.
+        """
         ...
 
     def cancel(self, query_id: str) -> None: ...

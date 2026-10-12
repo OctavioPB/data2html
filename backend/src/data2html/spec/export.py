@@ -22,12 +22,18 @@ def build_schema() -> dict[str, object]:
     return schema
 
 
+DEFAULT_OUT = Path(__file__).resolve().parents[4] / "studio/src/generated/spec.schema.json"
+
+
+def render_schema() -> str:
+    return json.dumps(build_schema(), indent=2, ensure_ascii=False) + "\n"
+
+
 def main() -> None:
-    default = Path(__file__).resolve().parents[4] / "studio/src/generated/spec.schema.json"
-    out = Path(sys.argv[1]) if len(sys.argv) > 1 else default
+    out = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_OUT
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(build_schema(), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"schema → {out}")
+    out.write_text(render_schema(), encoding="utf-8", newline="\n")
+    print(f"schema -> {out}")  # ASCII: la consola de Windows (cp1252) no imprime flechas
 
 
 if __name__ == "__main__":

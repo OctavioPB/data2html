@@ -1,0 +1,361 @@
+{
+  "$defs": {
+    "Dimension": {
+      "additionalProperties": false,
+      "properties": {
+        "column": {
+          "title": "Column",
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/FieldType"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "column",
+        "type"
+      ],
+      "title": "Dimension",
+      "type": "object"
+    },
+    "FieldType": {
+      "enum": [
+        "nominal",
+        "ordinal",
+        "temporal",
+        "quantitative"
+      ],
+      "title": "FieldType",
+      "type": "string"
+    },
+    "Filter": {
+      "additionalProperties": false,
+      "properties": {
+        "dimension": {
+          "pattern": "^[a-z][a-z0-9_]{0,62}$",
+          "title": "Dimension",
+          "type": "string"
+        },
+        "op": {
+          "$ref": "#/$defs/FilterOp"
+        },
+        "param": {
+          "description": "Nombre del parámetro del reporte que aporta el valor",
+          "pattern": "^[a-z][a-z0-9_]{0,62}$",
+          "title": "Param",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dimension",
+        "op",
+        "param"
+      ],
+      "title": "Filter",
+      "type": "object"
+    },
+    "FilterOp": {
+      "enum": [
+        "eq",
+        "in",
+        "gte",
+        "lte"
+      ],
+      "title": "FilterOp",
+      "type": "string"
+    },
+    "Layout": {
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "minimum": 0,
+          "title": "X",
+          "type": "integer"
+        },
+        "y": {
+          "minimum": 0,
+          "title": "Y",
+          "type": "integer"
+        },
+        "w": {
+          "maximum": 12,
+          "minimum": 1,
+          "title": "W",
+          "type": "integer"
+        },
+        "h": {
+          "minimum": 1,
+          "title": "H",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "w",
+        "h"
+      ],
+      "title": "Layout",
+      "type": "object"
+    },
+    "Mark": {
+      "enum": [
+        "table",
+        "kpi",
+        "bar",
+        "line",
+        "pie"
+      ],
+      "title": "Mark",
+      "type": "string"
+    },
+    "Measure": {
+      "additionalProperties": false,
+      "properties": {
+        "sql": {
+          "description": "Expresión agregada en dialecto DuckDB, p. ej. SUM(MONTO)",
+          "title": "Sql",
+          "type": "string"
+        },
+        "format": {
+          "$ref": "#/$defs/MeasureFormat",
+          "default": "number"
+        },
+        "owner": {
+          "description": "Responsable de la definición",
+          "title": "Owner",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sql",
+        "owner",
+        "description"
+      ],
+      "title": "Measure",
+      "type": "object"
+    },
+    "MeasureFormat": {
+      "enum": [
+        "number",
+        "currency",
+        "percent"
+      ],
+      "title": "MeasureFormat",
+      "type": "string"
+    },
+    "Mode": {
+      "enum": [
+        "live",
+        "snapshot"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "Report": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,62}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "semantic_model": {
+          "pattern": "^[a-z][a-z0-9_]{0,62}$",
+          "title": "Semantic Model",
+          "type": "string"
+        },
+        "mode": {
+          "$ref": "#/$defs/Mode",
+          "default": "live"
+        },
+        "params": {
+          "description": "parámetro → tipo",
+          "patternProperties": {
+            "^[a-z][a-z0-9_]{0,62}$": {
+              "type": "string"
+            }
+          },
+          "title": "Params",
+          "type": "object"
+        },
+        "visuals": {
+          "items": {
+            "$ref": "#/$defs/Visual"
+          },
+          "title": "Visuals",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "semantic_model",
+        "visuals"
+      ],
+      "title": "Report",
+      "type": "object"
+    },
+    "RlsRule": {
+      "additionalProperties": false,
+      "description": "Filtro por fila para fuentes sin RLS nativo: column = valor del claim del lector.",
+      "properties": {
+        "column": {
+          "title": "Column",
+          "type": "string"
+        },
+        "claim": {
+          "description": "Atributo de Identity, p. ej. 'groups' o 'email'",
+          "title": "Claim",
+          "type": "string"
+        }
+      },
+      "required": [
+        "column",
+        "claim"
+      ],
+      "title": "RlsRule",
+      "type": "object"
+    },
+    "SemanticModel": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "pattern": "^[a-z][a-z0-9_]{0,62}$",
+          "title": "Name",
+          "type": "string"
+        },
+        "source": {
+          "description": "Id de conexión registrada (nunca credenciales)",
+          "pattern": "^[a-z][a-z0-9_]{0,62}$",
+          "title": "Source",
+          "type": "string"
+        },
+        "table": {
+          "title": "Table",
+          "type": "string"
+        },
+        "dimensions": {
+          "patternProperties": {
+            "^[a-z][a-z0-9_]{0,62}$": {
+              "$ref": "#/$defs/Dimension"
+            }
+          },
+          "title": "Dimensions",
+          "type": "object"
+        },
+        "measures": {
+          "patternProperties": {
+            "^[a-z][a-z0-9_]{0,62}$": {
+              "$ref": "#/$defs/Measure"
+            }
+          },
+          "title": "Measures",
+          "type": "object"
+        },
+        "rls": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RlsRule"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "name",
+        "source",
+        "table",
+        "dimensions",
+        "measures"
+      ],
+      "title": "SemanticModel",
+      "type": "object"
+    },
+    "Visual": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "pattern": "^[a-z][a-z0-9_]{0,62}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "mark": {
+          "$ref": "#/$defs/Mark"
+        },
+        "measure": {
+          "pattern": "^[a-z][a-z0-9_]{0,62}$",
+          "title": "Measure",
+          "type": "string"
+        },
+        "dimension": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dimension"
+        },
+        "color": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Color"
+        },
+        "filters": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Filter"
+          },
+          "title": "Filters",
+          "type": "array"
+        },
+        "layout": {
+          "$ref": "#/$defs/Layout"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "mark",
+        "measure",
+        "layout"
+      ],
+      "title": "Visual",
+      "type": "object"
+    }
+  },
+  "title": "data2html report-spec"
+}

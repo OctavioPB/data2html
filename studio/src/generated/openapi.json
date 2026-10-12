@@ -1,0 +1,1213 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "data2html",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/catalog": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Catalog",
+        "operationId": "catalog_api_catalog_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Catalog"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalog/{source}/{table}": {
+      "patch": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Patch Descriptions",
+        "operationId": "patch_descriptions_api_catalog__source___table__patch",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Table"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DescriptionsPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalog/{source}/{table}/computed": {
+      "put": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Put Computed",
+        "description": "Crea o reemplaza una columna calculada. Se valida ejecutándola antes de guardarla.",
+        "operationId": "put_computed_api_catalog__source___table__computed_put",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Table"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComputedIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalog/{source}/{table}/computed/{name}": {
+      "delete": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Delete Computed",
+        "operationId": "delete_computed_api_catalog__source___table__computed__name__delete",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Table"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/csv/preview": {
+      "post": {
+        "tags": [
+          "csv"
+        ],
+        "summary": "Csv Preview",
+        "operationId": "csv_preview_api_csv_preview_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_csv_preview_api_csv_preview_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CsvPreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/csv/confirm": {
+      "post": {
+        "tags": [
+          "csv"
+        ],
+        "summary": "Csv Confirm",
+        "operationId": "csv_confirm_api_csv_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/csv/uploads/{upload_id}": {
+      "delete": {
+        "tags": [
+          "csv"
+        ],
+        "summary": "Csv Discard",
+        "operationId": "csv_discard_api_csv_uploads__upload_id__delete",
+        "parameters": [
+          {
+            "name": "upload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Upload Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/explore/{source}/{table}": {
+      "post": {
+        "tags": [
+          "explore"
+        ],
+        "summary": "Explore",
+        "operationId": "explore_api_explore__source___table__post",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Table"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExploreRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExplorePage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/compat": {
+      "get": {
+        "summary": "Compat",
+        "operationId": "compat_api_compat_get",
+        "parameters": [
+          {
+            "name": "dimension",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/FieldType"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dimension"
+            }
+          },
+          {
+            "name": "has_color",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Has Color"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Compat"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_csv_preview_api_csv_preview_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_csv_preview_api_csv_preview_post"
+      },
+      "Catalog": {
+        "properties": {
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogSource"
+            },
+            "type": "array",
+            "title": "Sources"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sources"
+        ],
+        "title": "Catalog"
+      },
+      "CatalogSource": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "tables": {
+            "items": {
+              "$ref": "#/components/schemas/TableOut"
+            },
+            "type": "array",
+            "title": "Tables"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "tables"
+        ],
+        "title": "CatalogSource"
+      },
+      "ColumnChoice": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "$ref": "#/components/schemas/CsvType"
+          },
+          "date_format": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DateFormat"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "decimal_comma": {
+            "type": "boolean",
+            "title": "Decimal Comma",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "ColumnChoice"
+      },
+      "ColumnFilter": {
+        "properties": {
+          "column": {
+            "type": "string",
+            "title": "Column"
+          },
+          "op": {
+            "$ref": "#/components/schemas/FilterOp"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                "type": "array",
+                "maxItems": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "column",
+          "op"
+        ],
+        "title": "ColumnFilter"
+      },
+      "ColumnGuess": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "$ref": "#/components/schemas/CsvType"
+          },
+          "date_format": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DateFormat"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "decimal_comma": {
+            "type": "boolean",
+            "title": "Decimal Comma",
+            "default": false
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "ColumnGuess"
+      },
+      "ColumnOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "type",
+          "description"
+        ],
+        "title": "ColumnOut"
+      },
+      "Compat": {
+        "properties": {
+          "marks": {
+            "items": {
+              "$ref": "#/components/schemas/Mark"
+            },
+            "type": "array",
+            "title": "Marks"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "marks"
+        ],
+        "title": "Compat"
+      },
+      "ComputedColumn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z_][a-z0-9_]{0,62}$",
+            "title": "Name"
+          },
+          "expr": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Expr"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "expr"
+        ],
+        "title": "ComputedColumn"
+      },
+      "ComputedIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z_][a-z0-9_]{0,62}$",
+            "title": "Name"
+          },
+          "expr": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Expr"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "expr"
+        ],
+        "title": "ComputedIn"
+      },
+      "ConfirmRequest": {
+        "properties": {
+          "upload_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "Upload Id"
+          },
+          "table": {
+            "type": "string",
+            "pattern": "^[a-z_][a-z0-9_]{0,62}$",
+            "title": "Table"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnChoice"
+            },
+            "type": "array",
+            "title": "Columns"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "upload_id",
+          "table",
+          "columns"
+        ],
+        "title": "ConfirmRequest"
+      },
+      "CsvPreview": {
+        "properties": {
+          "upload_id": {
+            "type": "string",
+            "title": "Upload Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "suggested_table": {
+            "type": "string",
+            "title": "Suggested Table"
+          },
+          "encoding": {
+            "type": "string",
+            "title": "Encoding"
+          },
+          "delimiter": {
+            "type": "string",
+            "title": "Delimiter"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnGuess"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "rows": {
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "upload_id",
+          "filename",
+          "suggested_table",
+          "encoding",
+          "delimiter",
+          "columns",
+          "warnings",
+          "rows"
+        ],
+        "title": "CsvPreview"
+      },
+      "CsvType": {
+        "type": "string",
+        "enum": [
+          "VARCHAR",
+          "BIGINT",
+          "DOUBLE",
+          "BOOLEAN",
+          "DATE",
+          "TIMESTAMP"
+        ],
+        "title": "CsvType"
+      },
+      "DateFormat": {
+        "type": "string",
+        "enum": [
+          "%Y-%m-%d",
+          "%d/%m/%Y",
+          "%m/%d/%Y",
+          "%d-%m-%Y",
+          "%m-%d-%Y"
+        ],
+        "title": "DateFormat"
+      },
+      "DescriptionsPatch": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "columns": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string",
+                  "maxLength": 2000
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Columns"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "DescriptionsPatch"
+      },
+      "ExploreColumn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "computed": {
+            "type": "boolean",
+            "title": "Computed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "type",
+          "computed"
+        ],
+        "title": "ExploreColumn"
+      },
+      "ExplorePage": {
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ExploreColumn"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "rows": {
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "columns",
+          "rows",
+          "offset",
+          "total"
+        ],
+        "title": "ExplorePage"
+      },
+      "ExploreRequest": {
+        "properties": {
+          "sort": {
+            "items": {
+              "$ref": "#/components/schemas/SortKey"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Sort",
+            "default": []
+          },
+          "filters": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnFilter"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Filters",
+            "default": []
+          },
+          "search": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Search",
+            "default": ""
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Offset",
+            "default": 0
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "default": 200
+          },
+          "with_total": {
+            "type": "boolean",
+            "title": "With Total",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ExploreRequest"
+      },
+      "FieldType": {
+        "type": "string",
+        "enum": [
+          "nominal",
+          "ordinal",
+          "temporal",
+          "quantitative"
+        ],
+        "title": "FieldType"
+      },
+      "FilterOp": {
+        "type": "string",
+        "enum": [
+          "=",
+          "!=",
+          "<",
+          "<=",
+          ">",
+          ">=",
+          "contains",
+          "starts_with",
+          "between",
+          "in",
+          "is_null",
+          "not_null"
+        ],
+        "title": "FilterOp"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "version"
+        ],
+        "title": "Health"
+      },
+      "Mark": {
+        "type": "string",
+        "enum": [
+          "table",
+          "kpi",
+          "bar",
+          "line",
+          "pie"
+        ],
+        "title": "Mark"
+      },
+      "SortKey": {
+        "properties": {
+          "column": {
+            "type": "string",
+            "title": "Column"
+          },
+          "desc": {
+            "type": "boolean",
+            "title": "Desc",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "column"
+        ],
+        "title": "SortKey"
+      },
+      "TableOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "row_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Count"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnOut"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "computed": {
+            "items": {
+              "$ref": "#/components/schemas/ComputedColumn"
+            },
+            "type": "array",
+            "title": "Computed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "row_count",
+          "columns",
+          "computed"
+        ],
+        "title": "TableOut"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

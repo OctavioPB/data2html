@@ -7,11 +7,12 @@ dependencies = [
   "fastapi>=0.115",
   "uvicorn[standard]>=0.30",
   "pydantic>=2.8",
-  "duckdb>=1.1",
-  "sqlglot>=25",
+  "duckdb>=1.5",
+  "sqlglot>=30",
   "pyarrow>=17",
   "pyyaml>=6",
   "jinja2>=3.1",
+  "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]
@@ -44,3 +45,7 @@ plugins = ["pydantic.mypy"]
 [[tool.mypy.overrides]]
 module = ["data2html.spec.*", "data2html.semantic.*", "data2html.sqlgen.*"]
 strict = true
+
+[[tool.mypy.overrides]]
+module = ["pyarrow", "pyarrow.*"]
+ignore_missing_imports = true

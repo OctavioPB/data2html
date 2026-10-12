@@ -1,29 +1,29 @@
 # PLAN — data2html
 
-Estado: **Fase 0 en curso**. Marca `[x]` y agrega la fecha (AAAA-MM-DD) al cerrar cada punto.
+Estado: **Fase 2 completa (2026-10-11)**. Fase 1 parcial: CSV listo; faltan Postgres y registro de conexiones. Marca `[x]` y agrega la fecha (AAAA-MM-DD) al cerrar cada punto.
 Criterio de cierre de fase: tests verdes, demo manual descrita en la fase, `PLAN.md` actualizado.
 
 ## Fase 0 — Esqueleto y contrato
 - [x] Contrato `report-spec` y modelo semántico en Pydantic (`backend/src/data2html/spec/`)
 - [x] Reglas de compatibilidad de tipos de gráfico (`spec/compat.py`) + tests
-- [ ] Exportar JSON Schema a `studio/src/generated/spec.schema.json` (`python -m data2html.spec.export`)
-- [ ] FastAPI mínimo: `/health`, `/api/catalog` vacío; OpenAPI → tipos TS (`npm run gen:api`)
-- [ ] Studio con Vite + React + TS + TanStack Query + Zustand, layout base (sidebar de fuentes)
-- [ ] CI: ruff, mypy, pytest, `npm run build`
+- [x] Exportar JSON Schema a `studio/src/generated/spec.schema.json` (`python -m data2html.spec.export`) (2026-10-11)
+- [x] FastAPI mínimo: `/health`, `/api/catalog` vacío; OpenAPI → tipos TS (`npm run gen:api`) (2026-10-11)
+- [x] Studio con Vite + React + TS + TanStack Query + Zustand, layout base (sidebar de fuentes) (2026-10-11)
+- [x] CI: ruff, mypy, pytest, `npm run build` (2026-10-11)
 - **Demo:** `pytest` verde; el studio muestra "API OK".
 
 ## Fase 1 — Fuentes: CSV y Postgres
-- [ ] Interfaz `DataSource` (catálogo, execute → Arrow, cancel, dialecto)
-- [ ] CSV: subida, inferencia de tipos con revisión del usuario, conversión a Parquet
+- [x] Interfaz `DataSource` (catálogo, execute → Arrow, cancel, dialecto) (2026-10-11)
+- [x] CSV: subida, inferencia de tipos con revisión del usuario, conversión a Parquet (2026-10-11)
 - [ ] Postgres vía `ATTACH ... (TYPE postgres, READ_ONLY)` de DuckDB; `postgres_query()` para agregaciones grandes
-- [ ] Catálogo con descripciones editables de tablas y columnas
+- [x] Catálogo con descripciones editables de tablas y columnas (2026-10-11)
 - [ ] Registro de conexiones; credenciales solo desde env
 - **Demo:** subir un CSV y ver su catálogo junto al de Postgres.
 
 ## Fase 2 — Explorador tipo Excel
-- [ ] Grid virtualizado (Glide Data Grid) con paginación del lado del servidor
-- [ ] Sort/filtro/búsqueda → SQL (`ORDER BY`, `WHERE`, `LIMIT/OFFSET`)
-- [ ] Columnas calculadas como expresiones SQL (no fórmulas de celda)
+- [x] Grid virtualizado (Glide Data Grid) con paginación del lado del servidor (2026-10-11)
+- [x] Sort/filtro/búsqueda → SQL (`ORDER BY`, `WHERE`, `LIMIT/OFFSET`) (2026-10-11)
+- [x] Columnas calculadas como expresiones SQL (no fórmulas de celda) (2026-10-11)
 - **Demo:** explorar 5M filas sin que el navegador se congele.
 
 ## Fase 3 — Perfilado EDA

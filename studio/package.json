@@ -1,0 +1,35 @@
+{
+  "name": "data2html-studio",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "gen:api": "openapi-typescript src/generated/openapi.json -o src/generated/api.ts",
+    "gen:api:live": "openapi-typescript http://localhost:8000/openapi.json -o src/generated/api.ts"
+  },
+  "dependencies": {
+    "@glideapps/glide-data-grid": "^6.0.3",
+    "@tanstack/react-query": "^5.104.2",
+    "lodash": "^4.18.1",
+    "marked": "^4.3.0",
+    "openapi-fetch": "^0.17.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-responsive-carousel": "^3.2.23",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "openapi-typescript": "^7.13.0",
+    "oxlint": "^1.81.0",
+    "typescript": "~5.9",
+    "vite": "^8.3.0"
+  }
+}

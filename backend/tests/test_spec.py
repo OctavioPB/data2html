@@ -2,7 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from data2html.spec import Report, SemanticModel, validate_report
-from data2html.spec.export import build_schema
+from data2html.spec.export import DEFAULT_OUT, build_schema, render_schema
 
 
 def test_examples_are_valid(model, report_data):
@@ -58,3 +58,9 @@ def test_measure_with_semicolon(model):
 def test_schema_exports_both_roots():
     defs = build_schema()["$defs"]
     assert "Report" in defs and "SemanticModel" in defs
+
+
+def test_committed_schema_is_up_to_date():
+    # Si falla: python -m data2html.spec.export
+    committed = DEFAULT_OUT.read_text(encoding="utf-8").replace("\r\n", "\n")
+    assert committed == render_schema()
