@@ -7,14 +7,13 @@ import decimal
 import json
 import uuid
 
-import duckdb
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter
 from sqlglot import exp
 
-from data2html.api.deps import CsvDep, MetaDep, SettingsDep, check_source, http_error
+from data2html.api.deps import MetaDep, SettingsDep, SourceDep
 from data2html.api.schemas import Cell, ExploreColumn, ExplorePage
+from data2html.sources.base import DataSource
 from data2html.sources.catalog_meta import CatalogMeta
-from data2html.sources.csv_source import CsvError, CsvSource, QueryInterrupted
 from data2html.sqlgen.explore import ComputedColumn, ExploreRequest, InvalidExplore, build_explore
 
 router = APIRouter(prefix="/api/explore", tags=["explore"])
@@ -39,27 +38,18 @@ def to_cell(v: object) -> Cell:
     return str(v)
 
 
-def _bad_query(e: Exception) -> HTTPException:
-    if isinstance(e, QueryInterrupted):
-        return HTTPException(status.HTTP_504_GATEWAY_TIMEOUT, detail=str(e))
-    return HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e).split("\n")[0])
-
-
 def run_explore(
-    csv: CsvSource, meta: CatalogMeta, table: str, req: ExploreRequest, timeout_s: int
+    src: DataSource, meta: CatalogMeta, table: str, req: ExploreRequest, timeout_s: int
 ) -> ExplorePage:
-    info = csv.table_info(table)
-    computed = meta.get(csv.id, table).computed
+    info = src.table_info(table)
+    computed = meta.get(src.id, table).computed
     types = {c.name: c.type for c in info.columns}
-    q = build_explore(table, types, computed, req)
-    try:
-        page = csv.execute(q.page, q.params, identity=None, timeout_s=timeout_s, query_id=uuid.uuid4().hex)
-        total = None
-        if q.count:
-            counted = csv.execute(q.count, q.params, identity=None, timeout_s=timeout_s)
-            total = int(counted.column("n")[0].as_py())
-    except (duckdb.Error, QueryInterrupted) as e:
-        raise _bad_query(e) from e
+    q = build_explore(src.relation(table), types, computed, req)
+    page = src.execute(q.page, q.params, identity=None, timeout_s=timeout_s, query_id=uuid.uuid4().hex)
+    total = None
+    if q.count:
+        counted = src.execute(q.count, q.params, identity=None, timeout_s=timeout_s)
+        total = int(counted.column("n")[0].as_py())
 
     computed_names = {c.name for c in computed}
     types |= {c.name: c.type for c in computed}
@@ -74,32 +64,24 @@ def run_explore(
 
 
 def resolve_computed(
-    csv: CsvSource, meta: CatalogMeta, table: str, col: ComputedColumn, timeout_s: int
+    src: DataSource, meta: CatalogMeta, table: str, col: ComputedColumn, timeout_s: int
 ) -> ComputedColumn:
     """Valida la expresión ejecutándola sobre una fila y devuelve la columna con su tipo DuckDB."""
-    info = csv.table_info(table)
+    info = src.table_info(table)
     if col.name in {c.name for c in info.columns}:
         raise InvalidExplore(f"ya existe una columna {col.name!r}")
-    others = [c for c in meta.get(csv.id, table).computed if c.name != col.name]
-    q = build_explore(table, {c.name: c.type for c in info.columns}, [*others, col],
+    others = [c for c in meta.get(src.id, table).computed if c.name != col.name]
+    q = build_explore(src.relation(table), {c.name: c.type for c in info.columns}, [*others, col],
                       ExploreRequest(limit=1, with_total=False))
     probe = exp.select(exp.func("typeof", exp.column(exp.to_identifier(col.name, quoted=True))).as_("t"))
     sql = probe.from_(exp.maybe_parse(q.page, dialect="duckdb").subquery("_p")).sql("duckdb")
-    try:
-        res = csv.execute(sql, q.params, identity=None, timeout_s=timeout_s)
-    except (duckdb.Error, QueryInterrupted) as e:
-        raise _bad_query(e) from e
+    res = src.execute(sql, q.params, identity=None, timeout_s=timeout_s)
     type_ = res.column("t")[0].as_py() if res.num_rows else ""
     return col.model_copy(update={"type": type_ or "VARCHAR"})
 
 
 @router.post("/{source}/{table}")
-def explore(source: str, table: str, req: ExploreRequest, csv: CsvDep, meta: MetaDep,
-            settings: SettingsDep) -> ExplorePage:
-    check_source(source, csv)
-    try:
-        return run_explore(csv, meta, table, req, settings.query_timeout_s)
-    except CsvError as e:
-        raise http_error(e) from e
-    except InvalidExplore as e:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)) from e
+def explore(
+    table: str, req: ExploreRequest, src: SourceDep, meta: MetaDep, settings: SettingsDep
+) -> ExplorePage:
+    return run_explore(src, meta, table, req, settings.query_timeout_s)

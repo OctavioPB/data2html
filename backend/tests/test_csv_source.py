@@ -1,21 +1,15 @@
 import io
 from datetime import date
 
+import duckdb
 import pytest
 
 from data2html.settings import Settings
 from data2html.sources.base import DataSource
 from data2html.sources.catalog_meta import CatalogMeta
-from data2html.sources.csv_source import (
-    ConfirmRequest,
-    Conflict,
-    CsvError,
-    CsvSource,
-    CsvType,
-    NotFound,
-    QueryInterrupted,
-    TooLarge,
-)
+from data2html.sources.csv_source import ConfirmRequest, CsvSource, CsvType
+from data2html.sources.engine import new_duckdb
+from data2html.sources.errors import Conflict, NotFound, QueryInterrupted, SourceError, TooLarge
 from data2html.sqlgen.validate import UnsafeSQL
 
 # Exportación típica de Excel en español: ';', coma decimal, Latin-1, fechas d/m/a
@@ -78,7 +72,7 @@ def test_confirm_rejects_existing_table(src):
 
 def test_confirm_rejects_wrong_columns(src):
     up = src.stage(io.BytesIO(VENTAS), "v.csv")
-    with pytest.raises(CsvError, match="no coinciden"):
+    with pytest.raises(SourceError, match="no coinciden"):
         src.confirm(ConfirmRequest(upload_id=up, table="v", columns=[{"name": "cp", "type": "VARCHAR"}]))
 
 
@@ -86,7 +80,7 @@ def test_confirm_reports_bad_conversion(src):
     up = src.stage(io.BytesIO(VENTAS), "v.csv")
     cols = [c.model_dump(exclude={"warnings"}) for c in src.preview(up).columns]
     cols[1] = {"name": "región", "type": "BIGINT"}
-    with pytest.raises(CsvError, match="convertir"):
+    with pytest.raises(SourceError, match="convertir"):
         src.confirm(ConfirmRequest(upload_id=up, table="v", columns=cols))
 
 
@@ -96,7 +90,7 @@ def test_upload_size_limit(src):
 
 
 def test_empty_upload(src):
-    with pytest.raises(CsvError, match="vacío"):
+    with pytest.raises(SourceError, match="vacío"):
         src.stage(io.BytesIO(b""), "vacio.csv")
 
 
@@ -129,9 +123,14 @@ def test_execute_rejects_non_select(src, sql):
 def test_execute_cannot_read_outside_data_dir(src, tmp_path):
     secret = tmp_path.parent / "secreto.csv"
     secret.write_text("a\n1\n")
-    with pytest.raises(Exception, match="(?i)permission|disabled"):
-        sql = f"SELECT * FROM read_csv('{secret.as_posix()}')"  # noqa: S608 (ataque simulado)
+    sql = f"SELECT * FROM read_csv('{secret.as_posix()}')"  # noqa: S608 (ataque simulado)
+    # capa 1: la validación rechaza la función
+    with pytest.raises(UnsafeSQL, match="read_csv"):
         src.execute(sql, {}, identity=None, timeout_s=10)
+    # capa 2: aunque la validación fallara, el sandbox de DuckDB no deja leer fuera de data/csv
+    conn = new_duckdb(allowed_dirs=[tmp_path / "csv"], memory_limit="256MB", threads=1)
+    with pytest.raises(duckdb.PermissionException):
+        conn.execute(sql)
 
 
 def test_execute_timeout(src):

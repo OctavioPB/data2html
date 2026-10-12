@@ -22,7 +22,14 @@ export function Sidebar() {
           <h3>
             {src.id} {src.kind !== src.id && <span className="muted">{src.kind}</span>}
           </h3>
-          {src.tables.length === 0 && <p className="muted small">Sin tablas. Sube un CSV.</p>}
+          {src.status === 'error' && (
+            <p className="error small" title={src.error ?? undefined}>
+              Sin conexión: {src.error}
+            </p>
+          )}
+          {src.status === 'ok' && src.tables.length === 0 && (
+            <p className="muted small">{src.kind === 'csv' ? 'Sin tablas. Sube un CSV.' : 'Sin tablas visibles.'}</p>
+          )}
           <ul>
             {src.tables.map((t) => {
               const active = selected?.source === src.id && selected.table === t.name

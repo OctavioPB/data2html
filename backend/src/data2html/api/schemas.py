@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -46,6 +46,8 @@ class TableOut(_Out):
 class CatalogSource(_Out):
     id: str
     kind: str
+    status: Literal["ok", "error"]
+    error: str | None = None
     tables: list[TableOut]
 
 

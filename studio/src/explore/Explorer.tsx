@@ -60,7 +60,7 @@ export function Explorer({ source, table }: Props) {
           {data.loading
             ? 'Cargando…'
             : data.total !== null &&
-              `${nf.format(data.total)} filas${filtered ? ` de ${nf.format(table.row_count ?? 0)}` : ''}`}
+              `${nf.format(data.total)} filas${filtered && table.row_count !== null ? ` de ${nf.format(table.row_count)}` : ''}`}
         </span>
       </div>
       <ComputedColumns source={source} table={table.name} computed={table.computed} />

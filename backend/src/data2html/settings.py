@@ -12,6 +12,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 @dataclass(frozen=True)
 class Settings:
     data_dir: Path
+    sources_file: Path | None = None  # config/sources.yaml; None = solo CSV
     max_upload_mb: int = 500
     duckdb_memory_limit: str = "2GB"
     duckdb_threads: int = 4
@@ -34,6 +35,7 @@ class Settings:
         env = os.environ
         return cls(
             data_dir=Path(env.get("D2H_DATA_DIR", _REPO_ROOT / "data")),
+            sources_file=Path(env.get("D2H_SOURCES_FILE", _REPO_ROOT / "config/sources.yaml")),
             max_upload_mb=int(env.get("D2H_MAX_UPLOAD_MB", "500")),
             duckdb_memory_limit=env.get("D2H_DUCKDB_MEMORY", "2GB"),
             duckdb_threads=int(env.get("D2H_DUCKDB_THREADS", "4")),

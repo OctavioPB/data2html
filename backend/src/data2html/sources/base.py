@@ -36,9 +36,18 @@ class Identity:
 @runtime_checkable
 class DataSource(Protocol):
     id: str
-    dialect: str  # nombre de dialecto SQLGlot: duckdb, postgres, mysql, teradata
+    kind: str  # csv, postgres, mysql, teradata…
+    dialect: str  # dialecto SQLGlot que acepta execute(): duckdb, postgres, mysql, teradata
 
     def catalog(self) -> list[TableInfo]: ...
+
+    def table_info(self, name: str) -> TableInfo:
+        """Una tabla del catálogo; `errors.NotFound` si no existe."""
+        ...
+
+    def relation(self, name: str) -> tuple[str, ...]:
+        """Partes del nombre calificado para el FROM (p. ej. ("pg_dev", "public", "ventas"))."""
+        ...
 
     def execute(
         self,

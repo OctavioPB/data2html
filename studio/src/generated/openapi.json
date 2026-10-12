@@ -11,6 +11,7 @@
           "catalog"
         ],
         "summary": "Catalog",
+        "description": "Una fuente caída no tumba el catálogo: aparece con `status=\"error\"`.",
         "operationId": "catalog_api_catalog_get",
         "responses": {
           "200": {
@@ -35,21 +36,21 @@
         "operationId": "patch_descriptions_api_catalog__source___table__patch",
         "parameters": [
           {
-            "name": "source",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Source"
-            }
-          },
-          {
             "name": "table",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Table"
+            }
+          },
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
             }
           }
         ],
@@ -97,21 +98,21 @@
         "operationId": "put_computed_api_catalog__source___table__computed_put",
         "parameters": [
           {
-            "name": "source",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Source"
-            }
-          },
-          {
             "name": "table",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Table"
+            }
+          },
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
             }
           }
         ],
@@ -158,15 +159,6 @@
         "operationId": "delete_computed_api_catalog__source___table__computed__name__delete",
         "parameters": [
           {
-            "name": "source",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Source"
-            }
-          },
-          {
             "name": "table",
             "in": "path",
             "required": true,
@@ -182,6 +174,15 @@
             "schema": {
               "type": "string",
               "title": "Name"
+            }
+          },
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
             }
           }
         ],
@@ -335,21 +336,21 @@
         "operationId": "explore_api_explore__source___table__post",
         "parameters": [
           {
-            "name": "source",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Source"
-            }
-          },
-          {
             "name": "table",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
               "title": "Table"
+            }
+          },
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
             }
           }
         ],
@@ -505,6 +506,25 @@
             "type": "string",
             "title": "Kind"
           },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
           "tables": {
             "items": {
               "$ref": "#/components/schemas/TableOut"
@@ -518,6 +538,7 @@
         "required": [
           "id",
           "kind",
+          "status",
           "tables"
         ],
         "title": "CatalogSource"

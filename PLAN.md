@@ -1,6 +1,6 @@
 # PLAN — data2html
 
-Estado: **Fase 2 completa (2026-10-11)**. Fase 1 parcial: CSV listo; faltan Postgres y registro de conexiones. Marca `[x]` y agrega la fecha (AAAA-MM-DD) al cerrar cada punto.
+Estado: **Fases 0, 1 y 2 completas (2026-10-11)**; siguiente: Fase 3. Marca `[x]` y agrega la fecha (AAAA-MM-DD) al cerrar cada punto.
 Criterio de cierre de fase: tests verdes, demo manual descrita en la fase, `PLAN.md` actualizado.
 
 ## Fase 0 — Esqueleto y contrato
@@ -15,9 +15,9 @@ Criterio de cierre de fase: tests verdes, demo manual descrita en la fase, `PLAN
 ## Fase 1 — Fuentes: CSV y Postgres
 - [x] Interfaz `DataSource` (catálogo, execute → Arrow, cancel, dialecto) (2026-10-11)
 - [x] CSV: subida, inferencia de tipos con revisión del usuario, conversión a Parquet (2026-10-11)
-- [ ] Postgres vía `ATTACH ... (TYPE postgres, READ_ONLY)` de DuckDB; `postgres_query()` para agregaciones grandes
+- [x] Postgres vía `ATTACH ... (TYPE postgres, READ_ONLY)` de DuckDB (2026-10-11); `postgres_query()` pasa a la Fase 5
 - [x] Catálogo con descripciones editables de tablas y columnas (2026-10-11)
-- [ ] Registro de conexiones; credenciales solo desde env
+- [x] Registro de conexiones; credenciales solo desde env (2026-10-11)
 - **Demo:** subir un CSV y ver su catálogo junto al de Postgres.
 
 ## Fase 2 — Explorador tipo Excel
@@ -41,6 +41,7 @@ Criterio de cierre de fase: tests verdes, demo manual descrita en la fase, `PLAN
 ## Fase 5 — Modelo semántico y constructor visual
 - [ ] Editor del modelo semántico (dimensiones, medidas con dueño y descripción)
 - [ ] `sqlgen`: visual + modelo → SQL DuckDB → SQLGlot al dialecto de la fuente
+- [ ] Agregaciones grandes en Postgres con `postgres_query()` (pospuesto de la Fase 1)
 - [ ] Constructor drag-and-drop: repisas dimensión / medida / color / filtros
 - [ ] Selector de tipo de gráfico limitado por `compat.allowed_marks`
 - [ ] Render con ECharts (tabla incluida como `mark`)
@@ -58,6 +59,7 @@ Criterio de cierre de fase: tests verdes, demo manual descrita en la fase, `PLAN
 - [ ] `TeradataSource` con `teradatasql`, sesión de confianza + `PROXYUSER`
 - [ ] Auth: interfaz con proveedor local (dev) y OIDC (SSO corporativo)
 - [ ] Pool de conexiones y límite de consultas concurrentes por fuente
+- [ ] Explorador sobre tablas remotas grandes: conteo estimado y paginación sin `OFFSET` profundo (hoy DuckDB lee la tabla completa para `count(*)` y para ordenar)
 - [ ] Docker de producción; decidir hosting (ver nota de red en ARCHITECTURE.md)
 - [ ] Importador pbix: `pbix2html` → `report-spec` + siembra del modelo semántico
 - **Demo:** un reporte migrado de Power BI servido en vivo con RLS.

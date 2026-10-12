@@ -1,6 +1,8 @@
 """Herramientas de desarrollo. No las importa la app.
 
-    python -m data2html.devtools demo [filas]   → data/csv/demo_ventas.parquet (default 5M filas)
+    python -m data2html.devtools demo [filas]        → data/csv/demo_ventas.parquet (default 5M filas)
+    python -m data2html.devtools install-extensions  → descarga las extensiones de DuckDB una vez
+                                                       (p. ej. al construir la imagen)
 """
 
 from __future__ import annotations
@@ -12,7 +14,9 @@ import time
 import duckdb
 
 from data2html.settings import Settings
-from data2html.sources.engine import sql_literal
+from data2html.sources.engine import ensure_extension, sql_literal
+
+EXTENSIONS = ("postgres",)
 
 
 def demo(rows: int = 5_000_000) -> None:
@@ -47,7 +51,17 @@ def demo(rows: int = 5_000_000) -> None:
     print(f"{rows:,} filas -> {out} en {time.perf_counter() - t0:.1f}s")
 
 
+def install_extensions() -> None:
+    for name in EXTENSIONS:
+        ensure_extension(name)
+        print(f"extensión {name}: instalada")
+
+
 if __name__ == "__main__":
-    if len(sys.argv) < 2 or sys.argv[1] != "demo":
+    cmd = sys.argv[1] if len(sys.argv) > 1 else ""
+    if cmd == "demo":
+        demo(int(sys.argv[2]) if len(sys.argv) > 2 else 5_000_000)
+    elif cmd == "install-extensions":
+        install_extensions()
+    else:
         sys.exit(__doc__)
-    demo(int(sys.argv[2]) if len(sys.argv) > 2 else 5_000_000)

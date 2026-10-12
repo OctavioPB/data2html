@@ -8,3 +8,4 @@ dist/
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
+config/sources.yaml

@@ -21,7 +21,8 @@ export function TableDetail({ tableRef }: { tableRef: TableRef }) {
       <header className="table-head">
         <h2>{table.name}</h2>
         <span className="muted">
-          {tableRef.source} · {table.row_count?.toLocaleString('es-MX') ?? '?'} filas ·{' '}
+          {tableRef.source}
+          {table.row_count !== null && ` · ${table.row_count.toLocaleString('es-MX')} filas`} ·{' '}
           {table.columns.length} columnas
         </span>
         <nav className="tabs" role="tablist">

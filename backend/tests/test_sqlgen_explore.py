@@ -30,7 +30,7 @@ def db():
 
 
 def run(db, req: ExploreRequest, computed=()):
-    q = build_explore("ventas", COLS, list(computed), req)
+    q = build_explore(("ventas",), COLS, list(computed), req)
     ensure_single_select(q.page)
     rows = db.execute(q.page, q.params or None).fetchall()
     total = db.execute(q.count, q.params or None).fetchone()[0] if q.count else None
@@ -77,7 +77,7 @@ def test_search_only_text_columns(db):
 def test_values_are_parameters_not_sql(db):
     evil = "x' OR 1=1; DROP TABLE ventas; --"
     req = ExploreRequest(filters=[{"column": "region", "op": "=", "value": evil}], search=evil)
-    q = build_explore("ventas", COLS, [], req)
+    q = build_explore(("ventas",), COLS, [], req)
     assert "DROP" not in q.page and evil in q.params.values()
     assert run(db, ExploreRequest(filters=[{"column": "region", "op": "=", "value": evil}]))[1] == 0
     assert db.execute("SELECT count(*) FROM ventas").fetchone()[0] == 4
@@ -86,9 +86,9 @@ def test_values_are_parameters_not_sql(db):
 @pytest.mark.parametrize("col", ['region"; DROP TABLE ventas; --', "nope", "*"])
 def test_unknown_columns_rejected(col):
     with pytest.raises(InvalidExplore):
-        build_explore("ventas", COLS, [], ExploreRequest(filters=[{"column": col, "op": "is_null"}]))
+        build_explore(("ventas",), COLS, [], ExploreRequest(filters=[{"column": col, "op": "is_null"}]))
     with pytest.raises(InvalidExplore):
-        build_explore("ventas", COLS, [], ExploreRequest(sort=[{"column": col}]))
+        build_explore(("ventas",), COLS, [], ExploreRequest(sort=[{"column": col}]))
 
 
 def test_computed_columns(db):
@@ -120,11 +120,11 @@ def test_computed_rejects_unsafe(expr, msg):
 
 def test_computed_name_clash():
     with pytest.raises(InvalidExplore, match="choca"):
-        build_explore("ventas", COLS, [ComputedColumn(name="monto", expr="1")], ExploreRequest())
+        build_explore(("ventas",), COLS, [ComputedColumn(name="monto", expr="1")], ExploreRequest())
 
 
 def test_sort_has_deterministic_tiebreak():
-    q = build_explore("ventas", COLS, [], ExploreRequest(sort=[{"column": "region"}]))
+    q = build_explore(("ventas",), COLS, [], ExploreRequest(sort=[{"column": "region"}]))
     assert 'ORDER BY "region" ASC, "monto", "fecha", "cp"' in q.page
 
 
@@ -149,3 +149,10 @@ def test_limit_is_capped():
 def test_date_param_is_cast(db):
     rows, _ = run(db, ExploreRequest(filters=[{"column": "fecha", "op": "=", "value": "2026-01-05"}]))
     assert rows[0][2] == date(2026, 1, 5)
+
+
+def test_qualified_relation():
+    q = build_explore(("pg_dev", "public", "fact ventas"), COLS, [], ExploreRequest())
+    assert 'FROM "pg_dev"."public"."fact ventas"' in q.page
+    with pytest.raises(InvalidExplore):
+        build_explore((), COLS, [], ExploreRequest())

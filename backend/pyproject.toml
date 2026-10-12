@@ -29,6 +29,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["postgres: integración con el Postgres de desarrollo (se omite si no hay servidor)"]
 
 [tool.ruff]
 line-length = 110

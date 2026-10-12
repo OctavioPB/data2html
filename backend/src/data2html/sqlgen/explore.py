@@ -135,6 +135,14 @@ def _col(name: str) -> exp.Column:
     return exp.column(exp.to_identifier(name, quoted=True))
 
 
+def _table(relation: tuple[str, ...]) -> exp.Table:
+    if not 1 <= len(relation) <= 3:
+        raise InvalidExplore(f"relación inválida: {relation!r}")
+    *qual, name = (exp.to_identifier(p, quoted=True) for p in relation)
+    catalog, db = ([None, None] + qual)[-2:]
+    return exp.Table(this=name, db=db, catalog=catalog)
+
+
 def _escape_like(v: str) -> str:
     return v.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
@@ -183,12 +191,13 @@ def _filter(f: ColumnFilter, type_: str, p: _Params) -> exp.Expr:
 
 
 def build_explore(
-    table: str,
+    relation: tuple[str, ...],
     columns: dict[str, str],
     computed: list[ComputedColumn],
     req: ExploreRequest,
 ) -> ExploreSQL:
-    """`columns`: nombre → tipo DuckDB de la tabla (del catálogo). Devuelve SQL DuckDB parametrizado."""
+    """`relation`: nombre calificado de la tabla (`DataSource.relation`); `columns`: nombre → tipo
+    DuckDB (del catálogo). Devuelve SQL DuckDB parametrizado."""
     types = dict(columns)
     projections: list[exp.Expr] = [exp.Star()]
     for cc in computed:
@@ -212,7 +221,7 @@ def build_explore(
         else:
             conds.append(exp.false())
 
-    base = exp.select(*projections).from_(exp.Table(this=exp.to_identifier(table, quoted=True)))
+    base = exp.select(*projections).from_(_table(relation))
     filtered = exp.select("*").from_("_t").with_("_t", as_=base)
     if conds:
         filtered = filtered.where(exp.and_(*conds))

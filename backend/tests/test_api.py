@@ -31,7 +31,8 @@ def test_health(client):
 
 
 def test_catalog_starts_empty(client):
-    assert client.get("/api/catalog").json() == {"sources": [{"id": "csv", "kind": "csv", "tables": []}]}
+    expected = {"id": "csv", "kind": "csv", "status": "ok", "error": None, "tables": []}
+    assert client.get("/api/catalog").json() == {"sources": [expected]}
 
 
 def test_csv_upload_flow(client):

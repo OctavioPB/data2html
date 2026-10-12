@@ -11,7 +11,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Catalog */
+        /**
+         * Catalog
+         * @description Una fuente caída no tumba el catálogo: aparece con `status="error"`.
+         */
         get: operations["catalog_api_catalog_get"];
         put?: never;
         post?: never;
@@ -197,6 +200,13 @@ export interface components {
             id: string;
             /** Kind */
             kind: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "error";
+            /** Error */
+            error?: string | null;
             /** Tables */
             tables: components["schemas"]["TableOut"][];
         };
@@ -464,8 +474,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                source: string;
                 table: string;
+                source: string;
             };
             cookie?: never;
         };
@@ -500,8 +510,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                source: string;
                 table: string;
+                source: string;
             };
             cookie?: never;
         };
@@ -536,9 +546,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                source: string;
                 table: string;
                 name: string;
+                source: string;
             };
             cookie?: never;
         };
@@ -664,8 +674,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                source: string;
                 table: string;
+                source: string;
             };
             cookie?: never;
         };

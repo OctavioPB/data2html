@@ -28,35 +28,13 @@ from data2html.settings import Settings
 from data2html.sources.base import ColumnInfo, Identity, TableInfo
 from data2html.sources.catalog_meta import CatalogMeta
 from data2html.sources.engine import new_duckdb, sql_ident, sql_literal
+from data2html.sources.errors import Conflict, NotFound, QueryInterrupted, SourceError, TooLarge
 from data2html.sqlgen.validate import ensure_single_select
 
 TABLE_RE = re.compile(r"^[a-z_][a-z0-9_]{0,62}$")
 _UPLOAD_ID_RE = re.compile(r"^[0-9a-f]{32}$")
 SAMPLE_ROWS = 10_000
 PREVIEW_ROWS = 20
-
-
-# ------------------------------------------------------------------ errores
-
-
-class CsvError(ValueError):
-    """Error atribuible a la entrada del autor (→ 4xx)."""
-
-
-class NotFound(CsvError):
-    pass
-
-
-class Conflict(CsvError):
-    pass
-
-
-class TooLarge(CsvError):
-    pass
-
-
-class QueryInterrupted(RuntimeError):
-    pass
 
 
 # ------------------------------------------------------------------ contrato de la API
@@ -226,6 +204,7 @@ class CsvSource:
     """Tablas Parquet nacidas de CSV. Las consultas corren en un DuckDB que solo ve `csv_dir`."""
 
     id = "csv"
+    kind = "csv"
     dialect = "duckdb"
 
     def __init__(self, settings: Settings, meta: CatalogMeta) -> None:
@@ -243,7 +222,7 @@ class CsvSource:
 
     def _parquet(self, table: str) -> Path:
         if not TABLE_RE.match(table):
-            raise CsvError(f"nombre de tabla inválido: {table!r}")
+            raise SourceError(f"nombre de tabla inválido: {table!r}")
         return self._s.csv_dir / f"{table}.parquet"
 
     def tables(self) -> list[str]:
@@ -266,7 +245,7 @@ class CsvSource:
                 out.write(chunk)
         if written == 0:
             dest.unlink()
-            raise CsvError("el archivo está vacío")
+            raise SourceError("el archivo está vacío")
         (self._s.uploads_dir / f"{upload_id}.json").write_text(
             json.dumps({"filename": Path(filename).name}), encoding="utf-8"
         )
@@ -290,7 +269,7 @@ class CsvSource:
                 "SELECT Delimiter, HasHeader FROM sniff_csv(?, encoding := ?)", [str(path), encoding]
             ).fetchone() or (",", True)
         except duckdb.Error as e:
-            raise CsvError(f"no se pudo leer el CSV: {e}") from e
+            raise SourceError(f"no se pudo leer el CSV: {e}") from e
         reader = (
             f"read_csv({sql_literal(str(path))}, all_varchar = true, header = {str(bool(header)).lower()}, "
             f"delim = {sql_literal(delim)}, encoding = {sql_literal(encoding)})"
@@ -309,7 +288,7 @@ class CsvSource:
             try:
                 sample = conn.execute(f"SELECT * FROM {reader} LIMIT {SAMPLE_ROWS}").to_arrow_table()  # noqa: S608 (reader: rutas y opciones del servidor)
             except duckdb.Error as e:
-                raise CsvError(f"no se pudo leer el CSV: {e}") from e
+                raise SourceError(f"no se pudo leer el CSV: {e}") from e
         finally:
             conn.close()
 
@@ -340,14 +319,14 @@ class CsvSource:
             delim, _, reader = self._read_raw(conn, path, encoding)
             names = [r[0] for r in conn.execute(f"DESCRIBE SELECT * FROM {reader}").fetchall()]  # noqa: S608
             if [c.name for c in req.columns] != names:
-                raise CsvError(f"las columnas no coinciden con el archivo: {names}")
+                raise SourceError(f"las columnas no coinciden con el archivo: {names}")
             # COPY no acepta parámetros: columnas citadas, tipos y formatos de listas cerradas, rutas propias
             select = ", ".join(cast_expr(c) for c in req.columns)
             copy = f"COPY (SELECT {select} FROM {reader}) TO {sql_literal(str(tmp))} (FORMAT parquet)"  # noqa: S608
             try:
                 conn.execute(copy)
             except duckdb.ConversionException as e:
-                raise CsvError(f"no se pudo convertir con los tipos elegidos: {e}") from e
+                raise SourceError(f"no se pudo convertir con los tipos elegidos: {e}") from e
         finally:
             conn.close()
         os.replace(tmp, target)
@@ -390,6 +369,10 @@ class CsvSource:
 
     def catalog(self) -> list[TableInfo]:
         return [self.table_info(t) for t in self.tables()]
+
+    def relation(self, name: str) -> tuple[str, ...]:
+        self._parquet(name)  # valida el nombre
+        return (name,)  # execute() crea una vista por tabla
 
     def execute(
         self,

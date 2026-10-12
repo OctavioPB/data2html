@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
 import duckdb
@@ -18,12 +18,31 @@ def sql_ident(name: str) -> str:
     return '"' + name.replace('"', '""') + '"'
 
 
-def new_duckdb(*, allowed_dirs: Iterable[Path], memory_limit: str, threads: int) -> duckdb.DuckDBPyConnection:
+def ensure_extension(name: str) -> None:
+    """Instala una extensión de DuckDB (descarga única). Las conexiones del servidor solo hacen LOAD."""
+    with duckdb.connect(":memory:") as conn:
+        conn.execute(f"INSTALL {sql_ident(name)}")
+
+
+def new_duckdb(
+    *,
+    allowed_dirs: Iterable[Path],
+    memory_limit: str,
+    threads: int,
+    setup: Callable[[duckdb.DuckDBPyConnection], None] | None = None,
+) -> duckdb.DuckDBPyConnection:
     """DuckDB en memoria que solo puede tocar `allowed_dirs`, sin extensiones nuevas ni red.
 
-    La configuración queda bloqueada: una consulta no puede volver a abrir el acceso externo.
+    `setup` corre antes del cierre (LOAD de extensiones, secretos, ATTACH). Después la configuración
+    queda bloqueada: una consulta no puede volver a abrir el acceso externo ni adjuntar otra base.
     """
     conn = duckdb.connect(":memory:", config={"memory_limit": memory_limit, "threads": threads})
+    if setup is not None:
+        try:
+            setup(conn)
+        except BaseException:
+            conn.close()
+            raise
     dirs = ", ".join(sql_literal(str(Path(d).resolve())) for d in allowed_dirs)
     conn.execute(f"SET allowed_directories = [{dirs}]")
     conn.execute("SET enable_external_access = false")
