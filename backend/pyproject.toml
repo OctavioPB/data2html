@@ -1,0 +1,46 @@
+[project]
+name = "data2html"
+version = "0.1.0"
+description = "EDA, SQL y visualización con reportes HTML en vivo"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.8",
+  "duckdb>=1.1",
+  "sqlglot>=25",
+  "pyarrow>=17",
+  "pyyaml>=6",
+  "jinja2>=3.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.6", "mypy>=1.11", "types-PyYAML"]
+teradata = ["teradatasql>=20"]
+ai = ["anthropic>=0.40", "boto3>=1.35"]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "SIM"]
+ignore = ["S101"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["data2html.spec.*", "data2html.semantic.*", "data2html.sqlgen.*"]
+strict = true

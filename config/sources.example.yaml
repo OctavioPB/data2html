@@ -1,0 +1,17 @@
+# Registro de conexiones. Solo NOMBRES de variables de entorno, nunca secretos.
+sources:
+  postgres_dev:
+    type: postgres
+    host: localhost
+    port: 5432
+    database: d2h
+    user: d2h_reader
+    password_env: PG_DEV_PASSWORD
+    mode: directquery
+  # teradata_prod:
+  #   type: teradata
+  #   host_env: TD_HOST
+  #   user_env: TD_USER
+  #   password_env: TD_PASSWORD
+  #   mode: directquery
+  #   rls: proxy_user

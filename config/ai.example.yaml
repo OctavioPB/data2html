@@ -1,0 +1,11 @@
+# Fase 9. Copia a ai.yaml. Los ids de modelo cambian: van aquí, nunca en código.
+enabled: false
+default: claude
+providers:
+  claude:  { kind: anthropic, model: "<id-del-modelo>", api_key_env: ANTHROPIC_API_KEY }
+  bedrock: { kind: bedrock, region_env: AWS_REGION, model: "<id-en-bedrock>" }
+  local:   { kind: openai_compatible, base_url: "http://ollama:11434/v1", model: "<modelo>" }
+exposure:                # por fuente: none | metadata | sample | results
+  postgres_dev: results
+  teradata_prod: metadata
+budget: { tokens_per_user_per_day: 200000 }

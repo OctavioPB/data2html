@@ -1,0 +1,25 @@
+id: ventas_regionales
+title: Ventas regionales
+semantic_model: ventas
+mode: live
+params: { anio: int }
+visuals:
+  - id: total
+    title: Venta neta del año
+    mark: kpi
+    measure: venta_neta
+    filters: [{ dimension: fecha, op: gte, param: anio }]
+    layout: { x: 0, y: 0, w: 3, h: 2 }
+  - id: por_region
+    title: Venta neta por región
+    mark: bar
+    dimension: region
+    measure: venta_neta
+    filters: [{ dimension: fecha, op: gte, param: anio }]
+    layout: { x: 3, y: 0, w: 9, h: 4 }
+  - id: tendencia
+    title: Pedidos por fecha
+    mark: line
+    dimension: fecha
+    measure: pedidos
+    layout: { x: 0, y: 4, w: 12, h: 4 }

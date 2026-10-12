@@ -1,0 +1,9 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: d2h
+      POSTGRES_USER: d2h
+      POSTGRES_PASSWORD: ${PG_DEV_PASSWORD:-d2h}
+    ports: ["5432:5432"]
+    volumes: ["./dev/seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro"]
