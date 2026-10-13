@@ -24,8 +24,18 @@ jobs:
         ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U d2h" --health-interval 2s --health-timeout 2s --health-retries 15
+      mysql:  # same as docker-compose.yml; development-only credentials
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: d2h
+          MYSQL_ROOT_PASSWORD: d2h-root
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pd2h-root" --health-interval 3s --health-timeout 3s
+          --health-retries 30
     env:
       PG_DEV_PASSWORD: d2h
+      MYSQL_DEV_PASSWORD: d2h
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -38,6 +48,8 @@ jobs:
         run: psql -h localhost -U d2h -d d2h -v ON_ERROR_STOP=1 -f ../dev/seed.sql
         env:
           PGPASSWORD: d2h
+      - name: Seed MySQL
+        run: mysql -h 127.0.0.1 -uroot -pd2h-root d2h < ../dev/seed_mysql.sql
       - run: python -m data2html.devtools install-extensions
       - run: ruff check .
       - run: mypy src

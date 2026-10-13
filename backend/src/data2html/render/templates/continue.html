@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block head %}<meta http-equiv="refresh" content="0;url={{ next }}">{% endblock %}
+{% block body %}
+<main class="page narrow">
+  <h1>{{ title }}</h1>
+  <p><a class="btn primary" href="{{ next }}">{{ label }}</a></p>
+</main>
+{% endblock %}

@@ -10,6 +10,7 @@ from data2html.api.deps import MetaDep, RegistryDep, SettingsDep, SourceDep
 from data2html.api.explore import resolve_computed
 from data2html.api.schemas import Catalog, CatalogSource, ComputedIn, DescriptionsPatch, TableOut
 from data2html.i18n import tr
+from data2html.scrub import scrub
 from data2html.sources.errors import SourceUnavailable
 from data2html.sqlgen.explore import ComputedColumn
 
@@ -26,7 +27,8 @@ def catalog(registry: RegistryDep, meta: MetaDep) -> Catalog:
             tables = [TableOut.of(t, meta.get(src.id, t.name)) for t in src.catalog()]
             out.append(CatalogSource(id=src.id, kind=src.kind, status="ok", tables=tables))
         except SourceUnavailable as e:
-            out.append(CatalogSource(id=src.id, kind=src.kind, status="error", error=str(e), tables=[]))
+            error = scrub(str(e))
+            out.append(CatalogSource(id=src.id, kind=src.kind, status="error", error=error, tables=[]))
     return Catalog(sources=out)
 
 
@@ -59,3 +61,12 @@ def delete_computed(table: str, name: str, src: SourceDep, meta: MetaDep) -> Tab
         detail = tr("unknown computed column: {name}", name=repr(name))
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=detail)
     return TableOut.of(info, meta.drop_computed(src.id, table, name))
+
+
+@router.post("/{source}/refresh", status_code=status.HTTP_204_NO_CONTENT)
+def refresh_source(src: SourceDep) -> None:
+    """Re-read a remote source's schema: DuckDB caches the attached catalog, so new tables or columns
+    only appear after reconnecting. A no-op for sources that read their catalog on every call."""
+    refresh = getattr(src, "refresh", None)
+    if callable(refresh):
+        refresh()

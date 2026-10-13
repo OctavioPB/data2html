@@ -49,7 +49,10 @@ def test_rejects_unknown_tables_and_unsafe_sql(sql):
 
 def test_page_and_count_wrap_the_query():
     q = prepare_user_sql("SELECT region FROM ventas ORDER BY region", T)
-    assert page_sql(q, 400, 200).endswith("AS _q LIMIT 200 OFFSET 400")
+    # an ordered query is paged in place, its order made total (ties broken by every column)
+    assert page_sql(q, 400, 200).endswith("ORDER BY region, COLUMNS(*) LIMIT 200 OFFSET 400")
+    unordered = prepare_user_sql("SELECT region FROM ventas", T)
+    assert page_sql(unordered, 400, 200).endswith("AS _q LIMIT 200 OFFSET 400")
     assert count_sql(q).startswith("SELECT COUNT(*) AS n FROM (SELECT")
     with pytest.raises(UnsafeSQL):
         page_sql(q, 0, 5000)
@@ -169,3 +172,44 @@ def test_profile_accepts_query_id_and_can_be_cancelled(client):
     cancel.request(query_id)
     assert client.get("/api/profile/csv/ventas", params={"query_id": query_id}).status_code == 504
     assert client.get("/api/profile/csv/ventas", params={"query_id": "../x"}).status_code == 422
+
+
+# ------------------------------------------------------------------ deterministic pages with ties
+
+
+@pytest.mark.parametrize(("sql", "tail"), [
+    ("SELECT * FROM t ORDER BY x DESC", 'ORDER BY "x" DESC, COLUMNS(*) LIMIT 2 OFFSET 2'),
+    ("SELECT x, count(*) AS n FROM t GROUP BY x ORDER BY n DESC", "ORDER BY n DESC, 1, 2 LIMIT 2 OFFSET 2"),
+    ("SELECT DISTINCT y FROM t ORDER BY y", "ORDER BY y, 1 LIMIT 2 OFFSET 2"),
+])
+def test_page_sql_breaks_ties(sql, tail):
+    from data2html.sqlgen.freeform import page_sql
+    from data2html.sqlgen.validate import ensure_single_select
+
+    out = page_sql(ensure_single_select(sql), 2, 2)
+    assert out.replace('"', "").endswith(tail.replace('"', "")), out
+    ensure_single_select(out)  # the paged SQL still passes validation
+
+
+def test_pages_with_ties_never_repeat_or_skip_rows():
+    import duckdb
+
+    from data2html.sqlgen.freeform import page_sql
+    from data2html.sqlgen.validate import ensure_single_select
+
+    con = duckdb.connect()
+    con.execute("CREATE TABLE t AS SELECT i % 3 AS x, i AS y FROM range(300) r(i)")  # 100-way ties on x
+    q = ensure_single_select("SELECT * FROM t ORDER BY x DESC")
+    seen = [row for off in range(0, 300, 7) for row in con.execute(page_sql(q, off, 7)).fetchall()]
+    assert len(seen) == 300 and len(set(seen)) == 300
+    assert [r[0] for r in seen] == sorted((r[0] for r in seen), reverse=True)  # the user's order holds
+
+
+def test_queries_without_order_or_with_their_own_limit_are_wrapped():
+    from data2html.sqlgen.freeform import page_sql
+    from data2html.sqlgen.validate import ensure_single_select
+
+    wrapped = ["SELECT * FROM t", "SELECT * FROM t ORDER BY x LIMIT 5",
+               "SELECT x, * FROM t GROUP BY ALL ORDER BY x"]
+    for sql in wrapped:
+        assert page_sql(ensure_single_select(sql), 0, 2).startswith("SELECT * FROM (")

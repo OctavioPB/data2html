@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block body %}
+<main class="page narrow">
+  <h1>{{ title }}</h1>
+  {% if error %}<p class="error-box" role="alert">{{ error }}</p>{% endif %}
+  {% if oidc_label %}
+  <p><a class="btn primary wide" href="/login/oidc?next={{ next | urlencode }}">{{ oidc_button }}</a></p>
+  {% endif %}
+  {% if local %}
+  <form class="stack" method="post" action="/login">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label>{{ user_label }}<input name="user_id" autocomplete="username" required maxlength="64" autofocus></label>
+    <label>{{ password_label }}<input name="password" type="password" autocomplete="current-password" required maxlength="1024"></label>
+    <button class="btn primary" type="submit">{{ submit }}</button>
+  </form>
+  {% endif %}
+  {% if dev %}
+  <h2 class="section">{{ dev_title }}</h2>
+  <p class="notice">{{ dev_hint }}</p>
+  <ul class="list">
+  {% for i in dev %}
+    <li>
+      <form method="post" action="/dev/login">
+        <input type="hidden" name="user_id" value="{{ i.user_id }}">
+        <input type="hidden" name="next" value="{{ next }}">
+        <button class="row-button" type="submit">
+          <strong>{{ i.user_id }}{% if i.author %} · {{ author_label }}{% endif %}</strong>
+          <span class="muted">{{ i.email }} · {{ i.groups | join(", ") if i.groups else no_groups }}</span>
+        </button>
+      </form>
+    </li>
+  {% endfor %}
+  </ul>
+  {% endif %}
+  {% if not local and not oidc_label and not dev %}<p class="muted">{{ nothing }}</p>{% endif %}
+</main>
+{% endblock %}

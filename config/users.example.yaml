@@ -1,0 +1,4 @@
+# Local users. Copy to config/users.yaml (ignored by git) and create them with:
+#   python -m data2html.auth add-user ana --email ana@example.com --groups Norte --author
+# The file stores scrypt hashes only, never passwords.
+users: {}

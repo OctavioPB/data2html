@@ -7,3 +7,12 @@ services:
       POSTGRES_PASSWORD: ${PG_DEV_PASSWORD:-d2h}
     ports: ["5432:5432"]
     volumes: ["./dev/seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro"]
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: d2h
+      MYSQL_ROOT_PASSWORD: ${MYSQL_DEV_ROOT_PASSWORD:-d2h-root}  # development only
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
+    ports: ["3306:3306"]
+    volumes: ["./dev/seed_mysql.sql:/docker-entrypoint-initdb.d/seed.sql:ro"]

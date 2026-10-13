@@ -509,3 +509,54 @@ input[aria-invalid='true'], select[aria-invalid='true'] { border-color: var(--do
 /* ---------- language selector ---------- */
 .topbar-right { display: flex; align-items: center; gap: 12px; }
 .lang-switch button { padding: 2px 8px; font-size: 0.75rem; letter-spacing: 0.04em; }
+
+/* ---------- Phase 6: reports (dashboard editor) ---------- */
+.dialog.narrow { width: min(520px, 100%); }
+.form-stack { display: flex; flex-direction: column; gap: 12px; }
+.form-stack .field input, .form-stack .field select { width: 100%; }
+.report-editor { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.report-head { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.report-head .grow { flex: 1; min-width: 220px; }
+.report-head .grow input { width: 100%; font-size: 1.05rem; font-weight: 600; }
+.report-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+.report-actions a[aria-disabled='true'] { opacity: 0.55; }
+.report-settings { display: grid; grid-template-columns: minmax(200px, 300px) minmax(200px, 280px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.report-settings .field input { width: 100%; }
+.params-editor { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px 12px; margin: 0; min-width: 0; overflow-x: auto; }
+.params-editor legend { font-size: 0.8rem; color: var(--muted); padding: 0 4px; }
+.params-editor table { margin-bottom: 8px; }
+.params-editor input, .params-editor select { width: 100%; min-width: 90px; }
+.report-grid { margin: 0 -12px; }
+.tile {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.tile-head { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.tile-handle { cursor: grab; color: var(--muted); padding: 0 4px; user-select: none; font-size: 1.1rem; }
+.tile-title { flex: 1; min-width: 0; font-weight: 600; border: 1px solid transparent !important; background: none !important; }
+.tile-title:hover, .tile-title:focus { border-color: var(--border) !important; }
+.tile-body { flex: 1; min-height: 0; padding: 6px 8px; overflow: hidden; }
+.tile-body .visual-table { max-height: 100%; }
+.react-grid-item.react-grid-placeholder { background: var(--accent); opacity: 0.15; border-radius: 8px; }
+@media (max-width: 900px) {
+  .report-settings { grid-template-columns: 1fr; }
+}
+.tile .kpis { gap: 8px; }
+.tile .kpi-value { font-size: clamp(1.1rem, 2.2vw, 1.8rem); overflow-wrap: anywhere; }
+
+/* ---------- Phase 7: sign-in gate ---------- */
+.gate { grid-column: 1 / -1; max-width: 520px; margin: 64px auto; padding: 0 16px; display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.user-menu { display: inline-flex; align-items: center; gap: 8px; }
+.inline-form { display: inline; margin: 0; }
+
+/* ---------- Phase 8: downloads, import sources ---------- */
+.downloads { display: inline-flex; align-items: center; gap: 4px; }
+.tile-head .downloads .btn { padding: 2px 6px; font-size: 0.72rem; }
+.ingest-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 0.8rem; padding: 2px 0 2px 8px; }
+.ingest-row .btn { padding: 1px 6px; font-size: 0.72rem; }
+.inline-field { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--muted); }
+.inline-field input { width: 90px; }
+.source-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.icon-only { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 0.95rem; padding: 0 4px; }
+.icon-only:hover:not(:disabled) { color: var(--accent); }
+.icon-only:disabled { opacity: 0.4; }

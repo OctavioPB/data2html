@@ -1,6 +1,6 @@
 # ADR 0007 — DuckDB sandbox + denied-function list; one connection per remote source
 
-**Status:** proposed · 2026-10-11
+**Status:** accepted · 2026-10-12
 
 ## Context
 Every query runs in a DuckDB with `allowed_directories`, `enable_external_access=false` and

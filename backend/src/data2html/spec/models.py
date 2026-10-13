@@ -6,6 +6,7 @@ Any change here requires updating examples/, the exported JSON Schema and the te
 
 from __future__ import annotations
 
+import datetime as dt
 from enum import StrEnum
 from typing import Annotated
 
@@ -166,12 +167,81 @@ class Mode(StrEnum):
     snapshot = "snapshot"
 
 
+class ParamType(StrEnum):
+    int = "int"
+    float = "float"
+    str = "str"
+    date = "date"
+    bool = "bool"
+
+
+class ParamValueError(ValueError):
+    pass
+
+
+def coerce_param(type_: ParamType, raw: object) -> Scalar:
+    """A parameter value (from YAML or a query string) → the declared type. Dates stay ISO text
+    (`YYYY-MM-DD`): the generated SQL casts the placeholder to the column's type."""
+    text = str(raw).strip()
+    try:
+        if type_ is ParamType.int:
+            if isinstance(raw, bool):
+                raise ValueError
+            return int(text)
+        if type_ is ParamType.float:
+            if isinstance(raw, bool):
+                raise ValueError
+            return float(text)
+        if type_ is ParamType.date:
+            return dt.date.fromisoformat(text).isoformat()
+        if type_ is ParamType.bool:
+            if isinstance(raw, bool):
+                return raw
+            low = text.lower()
+            if low not in ("true", "false", "1", "0"):
+                raise ValueError
+            return low in ("true", "1")
+        return str(raw)
+    except ValueError:
+        msg = tr("'{value}' is not a valid {type}", value=text[:40], type=type_.value)
+        raise ParamValueError(msg) from None
+
+
+class Param(Strict):
+    type: ParamType
+    default: Scalar | None = Field(default=None, description="Initial value in the viewer")
+    label: str = Field(default="", description="Text for the viewer's control; the name if empty")
+
+    @model_validator(mode="after")
+    def _default_matches_type(self) -> Param:
+        if self.default is not None:
+            try:
+                coerce_param(self.type, self.default)
+            except ParamValueError as e:
+                raise ValueError(tr("invalid default: {error}", error=e)) from e
+        return self
+
+
 class Report(Strict):
     id: Ident
     title: str
     semantic_model: Ident
-    mode: Mode = Mode.live
-    params: dict[Ident, str] = Field(default_factory=dict, description="parameter → type")
+    mode: Mode = Field(
+        default=Mode.live,
+        description="live: every view queries the source. snapshot: each reader's data (with their RLS) is "
+        "computed once and kept until the report is republished or `refresh_hours` pass",
+    )
+    refresh_hours: int | None = Field(
+        default=None, ge=1, le=24 * 90,
+        description="snapshot only: hours after which a reader's snapshot is recomputed; "
+        "empty = until the report is republished",
+    )
+    params: dict[Ident, ParamType | Param] = Field(
+        default_factory=dict, description="parameter → type, or {type, default, label}"
+    )
+    access: tuple[str, ...] = Field(
+        default=(), description="Groups allowed to open the report; empty = any authenticated reader"
+    )
     visuals: tuple[Visual, ...]
 
     @model_validator(mode="after")
@@ -180,7 +250,14 @@ class Report(Strict):
         dup = {i for i in ids if ids.count(i) > 1}
         if dup:
             raise ValueError(tr("duplicate visual ids: {ids}", ids=sorted(dup)))
+        if self.refresh_hours is not None and self.mode is not Mode.snapshot:
+            raise ValueError(tr("refresh_hours only applies to mode: snapshot"))
         return self
+
+    def param(self, name: str) -> Param:
+        """Declared parameter, with the `name: type` shorthand expanded."""
+        p = self.params[name]
+        return p if isinstance(p, Param) else Param(type=p)
 
 
 # ---------------------------------------------------------------- cross validation
@@ -207,6 +284,15 @@ def validate_report(report: Report, model: SemanticModel) -> list[str]:
                                  id=where, name=f.dimension))
             if f.param is not None and f.param not in report.params:
                 errors.append(tr("visual {id}: undeclared parameter '{name}'", id=where, name=f.param))
+            elif f.param is not None and f.dimension in model.dimensions:
+                ptype = report.param(f.param).type
+                ftype = model.dimensions[f.dimension].type
+                ok = {FieldType.temporal: {ParamType.date},
+                      FieldType.quantitative: {ParamType.int, ParamType.float}}.get(ftype, set(ParamType))
+                if ptype not in ok:
+                    errors.append(tr("visual {id}: parameter '{name}' ({ptype}) cannot filter "
+                                     "'{dimension}' ({ftype})", id=where, name=f.param, ptype=ptype.value,
+                                     dimension=f.dimension, ftype=ftype.value))
         dim = model.dimensions.get(v.dimension) if v.dimension else None
         if v.time_grain is not None and (dim is None or dim.type is not FieldType.temporal):
             errors.append(tr("visual {id}: time_grain only applies to a temporal dimension", id=where))

@@ -9,3 +9,6 @@ dist/
 .ruff_cache/
 .pytest_cache/
 config/sources.yaml
+config/auth.yaml
+config/users.yaml
+backend/build/

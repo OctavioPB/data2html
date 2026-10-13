@@ -1,0 +1,100 @@
+"""Identity. The ONLY place it comes from (security-rls skill, invariant 1; ADR 0010).
+
+A sign-in (local password, OIDC, or a development identity) creates a server-side session; the cookie
+carries its signed random id. On every request:
+- `local` and `dev` identities are re-read from their files (removing a user revokes access at once;
+  development identities also require `D2H_DEV_IDENTITIES=1` and a localhost client);
+- `oidc` identities are the snapshot taken from the validated `id_token` at sign-in.
+
+Nothing in headers, query parameters or bodies can set or change the identity.
+"""
+
+from __future__ import annotations
+
+from typing import Annotated
+
+from fastapi import Depends, HTTPException, Request, status
+
+from data2html.api.deps import SettingsDep
+from data2html.auth.config import load_auth_config
+from data2html.auth.dev import load_dev_identities
+from data2html.auth.local import load_users, to_identity
+from data2html.auth.session import COOKIE, verify
+from data2html.auth.sessions import get_store
+from data2html.i18n import tr
+from data2html.settings import Settings
+from data2html.sources.base import Identity
+
+SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+
+
+def dev_login_allowed(request: Request, settings: Settings) -> bool:
+    host = request.client.host if request.client else None
+    return settings.dev_identities_file is not None and host in settings.dev_hosts
+
+
+def session_id(request: Request) -> str | None:
+    return verify(request.cookies.get(COOKIE))
+
+
+def resolve_identity(request: Request, settings: Settings) -> Identity | None:
+    sid = session_id(request)
+    if sid is None:
+        return None
+    stored = get_store(settings.sessions_path).get(sid)
+    if stored is None:
+        return None
+    if stored.provider == "dev":
+        if not dev_login_allowed(request, settings):
+            return None
+        assert settings.dev_identities_file is not None  # checked by dev_login_allowed
+        return load_dev_identities(settings.dev_identities_file).get(stored.user_id)
+    if stored.provider == "local":
+        if not load_auth_config(settings.auth_file).local:
+            return None
+        user = load_users(settings.users_file).get(stored.user_id)
+        return to_identity(stored.user_id, user) if user else None
+    if stored.provider == "oidc":
+        return stored if load_auth_config(settings.auth_file).oidc is not None else None
+    return None
+
+
+def current_identity(request: Request, settings: SettingsDep) -> Identity | None:
+    return resolve_identity(request, settings)
+
+
+def require_identity(identity: Annotated[Identity | None, Depends(current_identity)]) -> Identity:
+    if identity is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=tr("sign in to see this report"))
+    return identity
+
+
+def require_author(identity: Annotated[Identity | None, Depends(current_identity)]) -> Identity:
+    """The studio is single-author (ADR 0005): every studio route requires the author role."""
+    if identity is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=tr("sign in to use the studio"))
+    if not identity.author:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=tr("your account cannot use the studio"))
+    return identity
+
+
+def check_origin(request: Request, settings: SettingsDep) -> None:
+    """CSRF defence for cookie-authenticated requests (with `SameSite=Strict`): a browser request that
+    changes state must come from this same origin. Requests without `Origin` are not from a browser
+    form/script of another site (browsers always send it on cross-origin POST/PUT/PATCH/DELETE)."""
+    if request.method in SAFE_METHODS:
+        return
+    origin = request.headers.get("origin")
+    if origin is None:
+        return
+    host = request.headers.get("host", "")
+    allowed = {f"{request.url.scheme}://{host}", *load_auth_config(settings.auth_file).trusted_origins}
+    if settings.public_url:
+        allowed.add(settings.public_url.rstrip("/"))
+    if origin.rstrip("/") not in allowed:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=tr("cross-site request refused"))
+
+
+IdentityDep = Annotated[Identity, Depends(require_identity)]
+MaybeIdentityDep = Annotated[Identity | None, Depends(current_identity)]
+AuthorDep = Annotated[Identity, Depends(require_author)]

@@ -6,6 +6,8 @@
 - Filter and RLS values go as parameters (`$p0`…), never in the SQL text.
 - RLS: if the model declares `rls`, the reader's identity is required. Without an identity the query is
   only built with an explicit `author_preview=True` (single-user studio); never by default.
+- `rls_exact_recheck`: for sources whose text comparison ignores case/accents (MySQL), the RLS predicate
+  is repeated in a form DuckDB does not push down, so the exact comparison always applies.
 """
 
 from __future__ import annotations
@@ -63,6 +65,20 @@ class _Params:
         return exp.cast(ph, exp.DataType.build(cast_to, dialect="duckdb")) if cast_to else ph
 
 
+def _source_col(name: str, computed: dict[str, str]) -> exp.Expr:
+    """A physical column, or the expression of an explorer computed column (scalar, per row, over
+    physical columns only; validated again here)."""
+    expr = computed.get(name)
+    if expr is None:
+        return _col(name)
+    tree, _ = parse_expression(expr, aggregate=False)
+    for c in tree.find_all(exp.Column):
+        if c.name in computed:
+            raise VisualQueryError(tr("computed column '{name}' uses another computed column", name=name))
+        c.set("this", _ident(c.name))
+    return exp.paren(tree)
+
+
 def measure_expr(sql: str) -> exp.Expr:
     tree, _ = parse_expression(sql, aggregate=True)
     for c in tree.find_all(exp.Column):  # quote: the model already validated the names, quote anyway
@@ -71,7 +87,7 @@ def measure_expr(sql: str) -> exp.Expr:
 
 
 def _filter(
-    f: Filter, column: str, cast_to: str | None, report_params: dict[str, object], p: _Params
+    f: Filter, c: exp.Expr, cast_to: str | None, report_params: dict[str, object], p: _Params
 ) -> exp.Expr:
     if f.param is not None:
         if f.param not in report_params:
@@ -80,7 +96,6 @@ def _filter(
     else:
         raw = f.value
     values = list(raw) if isinstance(raw, list | tuple) else [raw]
-    c = _col(column)
     if f.op is FilterOp.in_:
         return exp.In(this=c, expressions=[p.add(v, cast_to) for v in values])
     if f.op is FilterOp.between:
@@ -96,7 +111,7 @@ def _filter(
 
 
 def _rls(
-    model: SemanticModel, identity: Identity | None, author_preview: bool, p: _Params
+    model: SemanticModel, identity: Identity | None, author_preview: bool, p: _Params, exact: bool
 ) -> exp.Expr | None:
     if model.rls is None:
         return None
@@ -111,7 +126,15 @@ def _rls(
     values = list(raw) if isinstance(raw, tuple | list) else [raw]
     if not values:
         return exp.false()  # no claims, no rows
-    return exp.In(this=_col(model.rls.column), expressions=[p.add(str(v), None) for v in values])
+    params = [p.add(str(v), None) for v in values]
+    pushed = exp.In(this=_col(model.rls.column), expressions=params)
+    if not exact:
+        return pushed
+    # The source compares loosely (case/accents) and DuckDB pushes `pushed` down to it: keep it (it
+    # narrows the rows there) and re-check exactly in DuckDB with an expression that is not pushed down.
+    local = exp.In(this=exp.paren(exp.DPipe(this=_col(model.rls.column), expression=exp.Literal.string(""))),
+                   expressions=[x.copy() for x in params])
+    return exp.and_(pushed, local)
 
 
 def build_visual_query(
@@ -123,9 +146,13 @@ def build_visual_query(
     report_params: dict[str, object] | None = None,
     identity: Identity | None,
     author_preview: bool = False,
+    rls_exact_recheck: bool = False,
+    computed: dict[str, str] | None = None,
     limit: int = DEFAULT_LIMIT,
 ) -> VisualQuery:
-    """`column_types`: physical column → DuckDB type (from the catalog), to type the parameters."""
+    """`column_types`: physical column → DuckDB type (from the catalog), to type the parameters.
+    `computed`: the table's explorer computed columns (name → expression) that dimensions may use."""
+    computed = computed or {}
     if visual.measure not in model.measures:
         raise VisualQueryError(tr("unknown measure: {name}", name=repr(visual.measure)))
     p = _Params()
@@ -138,11 +165,11 @@ def build_visual_query(
         dim = model.dimensions.get(dim_name)
         if dim is None:
             raise VisualQueryError(tr("unknown dimension: {name}", name=repr(dim_name)))
-        key: exp.Expr = _col(dim.column)
+        key: exp.Expr = _source_col(dim.column, computed)
         if visual.time_grain is not None:
             if dim.type is not FieldType.temporal:
                 raise VisualQueryError(tr("time_grain only applies to a temporal dimension"))
-            trunc = exp.func("date_trunc", exp.Literal.string(visual.time_grain.value), _col(dim.column))
+            trunc = exp.func("date_trunc", exp.Literal.string(visual.time_grain.value), key)
             key = exp.cast(trunc, exp.DataType.build("DATE"))
         select.append(exp.alias_(key, dim_name, quoted=True))
         group.append(key.copy())
@@ -154,8 +181,8 @@ def build_visual_query(
         color = model.dimensions.get(color_name)
         if color is None:
             raise VisualQueryError(tr("unknown color dimension: {name}", name=repr(color_name)))
-        select.append(exp.alias_(_col(color.column), color_name, quoted=True))
-        group.append(_col(color.column))
+        select.append(exp.alias_(_source_col(color.column, computed), color_name, quoted=True))
+        group.append(_source_col(color.column, computed))
 
     measure = model.measures[visual.measure]
     select.append(exp.alias_(measure_expr(measure.sql), visual.measure, quoted=True))
@@ -170,8 +197,9 @@ def build_visual_query(
         dim = model.dimensions.get(f.dimension)
         if dim is None:
             raise VisualQueryError(tr("filter on unknown dimension: {name}", name=repr(f.dimension)))
-        conds.append(_filter(f, dim.column, column_types.get(dim.column), report_params or {}, p))
-    rls = _rls(model, identity, author_preview, p)
+        conds.append(_filter(f, _source_col(dim.column, computed), column_types.get(dim.column),
+                             report_params or {}, p))
+    rls = _rls(model, identity, author_preview, p, rls_exact_recheck)
     if rls is not None:
         conds.append(rls)
     if conds:

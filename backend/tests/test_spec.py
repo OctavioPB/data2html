@@ -1,7 +1,15 @@
 import pytest
 from pydantic import ValidationError
 
-from data2html.spec import Report, SemanticModel, validate_report
+from data2html.spec import (
+    Param,
+    ParamType,
+    ParamValueError,
+    Report,
+    SemanticModel,
+    coerce_param,
+    validate_report,
+)
 from data2html.spec.export import DEFAULT_OUT, build_schema, render_schema
 
 
@@ -32,7 +40,7 @@ def test_unknown_measure_and_undeclared_param(model, report_data):
     report_data["params"] = {}
     errors = validate_report(Report.model_validate(report_data), model)
     assert any("unknown measure 'margen'" in e for e in errors)
-    assert any("undeclared parameter 'anio'" in e for e in errors)
+    assert any("undeclared parameter 'desde'" in e for e in errors)
 
 
 def test_incompatible_mark(model, report_data):
@@ -104,7 +112,7 @@ def test_invalid_measures(model, sql, msg):
     {"dimension": "canal", "op": "eq", "value": "Web"},
     {"dimension": "canal", "op": "in", "value": ["Web", "Tienda"]},
     {"dimension": "fecha", "op": "between", "value": ["2025-01-01", "2025-06-30"]},
-    {"dimension": "fecha", "op": "gte", "param": "anio"},
+    {"dimension": "fecha", "op": "gte", "param": "desde"},
 ])
 def test_filter_value_or_param(report_data, f):
     report_data["visuals"][1]["filters"] = [f]
@@ -113,7 +121,7 @@ def test_filter_value_or_param(report_data, f):
 
 @pytest.mark.parametrize("f", [
     {"dimension": "canal", "op": "eq"},                                       # neither param nor value
-    {"dimension": "canal", "op": "eq", "param": "anio", "value": "x"},         # both
+    {"dimension": "canal", "op": "eq", "param": "desde", "value": "x"},         # both
     {"dimension": "fecha", "op": "between", "value": ["2025-01-01"]},
     {"dimension": "canal", "op": "in", "value": []},
     {"dimension": "canal", "op": "eq", "value": ["a", "b"]},
@@ -132,3 +140,58 @@ def test_time_grain_only_on_temporal(model, report_data):
     report_data["visuals"][1]["time_grain"] = "fortnight"
     with pytest.raises(ValidationError):
         Report.model_validate(report_data)
+
+
+# ---------------------------------------------------------------- Phase 6: typed params and access
+
+
+def test_param_shorthand_and_full_form(report_data):
+    report_data["params"] = {"desde": "date", "n": {"type": "int", "default": 5, "label": "Top"}}
+    r = Report.model_validate(report_data)
+    assert r.param("desde") == Param(type=ParamType.date)
+    assert r.param("n").default == 5 and r.param("n").label == "Top"
+
+
+@pytest.mark.parametrize("p", [
+    "datetime",                                   # unknown type
+    {"type": "date", "default": "31/12/2025"},    # default does not parse
+    {"type": "int", "default": "x"},
+    {"type": "int", "required": True},            # unknown field
+])
+def test_param_rejections(report_data, p):
+    report_data["params"] = {"desde": p}
+    with pytest.raises(ValidationError):
+        Report.model_validate(report_data)
+
+
+@pytest.mark.parametrize(("type_", "raw", "expected"), [
+    (ParamType.int, "42", 42),
+    (ParamType.float, "1.5", 1.5),
+    (ParamType.date, "2025-03-01", "2025-03-01"),
+    (ParamType.bool, "true", True),
+    (ParamType.bool, "0", False),
+    (ParamType.str, "Norte", "Norte"),
+])
+def test_coerce_param(type_, raw, expected):
+    assert coerce_param(type_, raw) == expected
+
+
+@pytest.mark.parametrize(("type_", "raw"), [
+    (ParamType.int, "4.2"), (ParamType.int, True), (ParamType.date, "2025-13-01"),
+    (ParamType.date, "1; DROP"), (ParamType.bool, "yes"),
+])
+def test_coerce_param_rejections(type_, raw):
+    with pytest.raises(ParamValueError):
+        coerce_param(type_, raw)
+
+
+def test_param_type_must_fit_the_dimension(model, report_data):
+    report_data["params"] = {"desde": "int"}      # filters fecha (temporal)
+    errors = validate_report(Report.model_validate(report_data), model)
+    assert any("cannot filter 'fecha'" in e for e in errors)
+
+
+def test_access_groups(report_data):
+    report_data["access"] = ["Norte", "Direccion"]
+    assert Report.model_validate(report_data).access == ("Norte", "Direccion")
+    assert Report.model_validate({**report_data, "access": []}).access == ()

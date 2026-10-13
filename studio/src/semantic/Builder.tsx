@@ -3,6 +3,7 @@
  * Native HTML5 drag-and-drop, plus clicking a field as an alternative (keyboard / accessibility).
  * The chart type is limited to `allowed_marks` (GET /api/compat); the backend generates the SQL.
  */
+import type { EChartsType } from 'echarts/core'
 import { useState, type DragEvent } from 'react'
 
 import type { Schemas } from '../api/client'
@@ -10,8 +11,10 @@ import { useCompat, useVisualQuery } from '../api/queries'
 import { useT, type MessageKey } from '../i18n'
 import { GRAIN_LABEL, MARK_LABEL } from '../render/labels'
 import { VisualChart } from '../render/VisualChart'
+import { VisualDownloads } from '../render/VisualDownloads'
+import { AddToReport } from '../reports/AddToReport'
 import type { VisualDraft } from '../store'
-import { visualYaml } from './draft'
+import { slug, visualYaml } from './draft'
 
 type Model = Schemas['SemanticModel']
 type Filter = Schemas['Filter']
@@ -47,6 +50,8 @@ export function Builder({ model, preset }: { model: Model; preset: VisualDraft |
   const [v, setV] = useState<VisualDraft>(() => preset ?? { ...EMPTY, measure: Object.keys(model.measures)[0] ?? '' })
   const [over, setOver] = useState<Shelf | null>(null)
   const [copied, setCopied] = useState(false)
+  const [adding, setAdding] = useState(false)
+  const [chart, setChart] = useState<EChartsType | null>(null)
 
   const dim = v.dimension ? model.dimensions[v.dimension] : undefined
   const compat = useCompat(dim?.type ?? null, Boolean(v.color))
@@ -177,6 +182,10 @@ export function Builder({ model, preset }: { model: Model; preset: VisualDraft |
           >
             {copied ? t('builder.copied') : t('builder.copyYaml')}
           </button>
+          <button type="button" className="btn small primary" disabled={!ready} onClick={() => setAdding(true)}>
+            {t('builder.addToReport')}
+          </button>
+          <VisualDownloads request={request} chart={result.data ? chart : null} name={slug(title, 'visual')} />
         </div>
 
         <section className="preview" aria-busy={result.isFetching}>
@@ -194,6 +203,8 @@ export function Builder({ model, preset }: { model: Model; preset: VisualDraft |
                 color={v.color ?? null}
                 measures={[v.measure]}
                 format={measure?.format}
+                timeGrain={v.time_grain ?? null}
+                onChart={setChart}
               />
               <details className="sql-details">
                 <summary className="muted small">{t('builder.generatedSql')}</summary>
@@ -203,6 +214,9 @@ export function Builder({ model, preset }: { model: Model; preset: VisualDraft |
           )}
         </section>
       </div>
+      {adding && (
+        <AddToReport model={model.name} visual={{ ...v, mark, filters }} title={title} onClose={() => setAdding(false)} />
+      )}
     </div>
   )
 }

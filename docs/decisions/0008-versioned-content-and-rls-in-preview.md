@@ -1,6 +1,6 @@
 # ADR 0008 — Versioned content in `content/` and RLS in the author's preview
 
-**Status:** proposed · 2026-10-11
+**Status:** accepted · 2026-10-12
 
 ## Context
 Phase 5 introduces semantic models edited from the studio; Phase 6 will do the same with reports.
@@ -18,7 +18,7 @@ We need to decide where they live and how RLS behaves when the one querying is t
 
 ## Consequences
 - A measure change lands in git history, with its diff and author.
-- Saving from the studio rewrites the YAML: hand-written comments are lost (a fixed header is kept).
-  If that becomes a problem, the alternative is editing with a comment-preserving parser.
+- Saving from the studio updates the YAML in place (round-trip with `ruamel.yaml`, 2026-10-12): hand-written
+  comments, key order and flow style survive; visuals are matched by `id`; defaults are not written.
 - Aggregating in Postgres with `postgres_query()` is postponed to Phase 7: it takes SQL as text, without
   parameters, and would force embedding values. It will be designed together with native Teradata execution.

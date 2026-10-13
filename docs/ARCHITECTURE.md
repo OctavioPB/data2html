@@ -11,10 +11,12 @@ backend/src/data2html/
   spec/       CONTRACT: Report, Visual, SemanticModel, compat, JSON Schema
   semantic/   loading and cross-validation of semantic models
   sqlgen/     Visual + SemanticModel → DuckDB SQL → SQLGlot(dialect)
-  sources/    DataSource: csv, postgres, mysql, teradata, dynamodb_export
+  sources/    DataSource: csv + dynamodb (ParquetSource), postgres + mysql (AttachedSource), teradata
+  ingest/     scheduled imports (DynamoDB S3 export → Parquet; CLI, never the web server)
   profiling/  EDA (statistics, histograms, correlations, sampling)
-  render/     Jinja2 + ECharts → report HTML (mark selector included)
-  auth/       providers: local, oidc → Identity
+  reports/    versioned report-specs in content/reports/ (saving = publishing)
+  render/     viewer HTML (Jinja2 + static viewer.js + ECharts), theme, per-identity cache
+  auth/       current_identity: local (scrypt), oidc (Entra ID), dev (localhost) → Identity; sessions
   ai/         optional: LLMProvider, tools, exposure policies
   i18n.py, locales/  server messages in English / Spanish (per request)
   importers/pbix/    extractor inherited from pbix2html
@@ -22,31 +24,43 @@ backend/src/data2html/
 
 ## How a visual query flows
 
-1. The viewer requests `GET /api/r/{report}/visuals/{visual}?params`.
-2. `auth` resolves the reader's `Identity` (never from parameters).
+1. The viewer requests `GET /api/r/{report}/visuals/{visual}?p.<param>=…&cf=<dimension>:<value>`.
+2. `auth` resolves the reader's `Identity` from the signed session cookie (never from parameters or
+   headers) and the report's `access` groups are checked.
 3. The `Visual` is loaded from the `report-spec`, together with the `SemanticModel` it references.
 4. `sqlgen` builds DuckDB-dialect SQL with parameters; SQLGlot transpiles it to the source's dialect.
 5. The source runs it with the identity (Teradata: `PROXYUSER`; others: the model's RLS filter).
 6. Result as Arrow → compact JSON (columns + rows) to the browser.
-7. Cache by `hash(spec, identity, parameters)` with a per-source TTL.
+7. Cache by `hash(report, model, visual, identity, parameters, cross-filters)` with a TTL (global for now;
+   per source in Phase 7).
+
+The page `/r/{report}` itself carries no data: layout, visuals, allowed marks and chrome strings in an
+escaped JSON block, under a strict CSP. Changing the chart type redraws the same rows; a cross-filter
+(click on a bar or slice) re-queries the other visuals with an extra equality filter, ANDed with RLS.
 
 ## Execution modes
 
 | Mode | Where the SQL runs | Sources |
 |---|---|---|
-| Import | Local DuckDB over Parquet | CSV, DynamoDB (export), optionally Postgres/MySQL |
+| Import | Local DuckDB over Parquet | CSV, DynamoDB (S3 export, ADR 0012) |
 | DirectQuery | In the source | Teradata, Postgres, MySQL |
 
-Postgres/MySQL through DuckDB extensions: filters are pushed down, aggregations not always.
+Postgres/MySQL through DuckDB extensions: filters are pushed down, aggregations not always. MySQL compares
+text ignoring case/accents, so RLS is re-checked exactly in DuckDB (ADR 0011).
 For large tables, `sqlgen` emits the whole query in the source's dialect
 (`postgres_query`, `mysql_query` or a native connection) — planned for Phase 7 (ADR 0008).
 
 ## Identity and roles
 
-- **Author:** a single user with access to the studio (`role=author`).
+- **Author:** a single user with access to the studio (`Identity.author`).
 - **Reader:** any authenticated identity with access to the published report.
-- `auth/` exposes `Identity(user_id, email, groups, provider)`. Providers: `local` (development and
-  personal use) and `oidc` (corporate SSO). Both can be active at once.
+- `auth/` exposes `Identity(user_id, email, provider, groups, author, db_user)` through one dependency,
+  `current_identity` (ADR 0010). Providers: `local` (users file, scrypt), `oidc` (Microsoft Entra ID; App
+  Roles feed `groups` and the author role) and `dev` (only with `D2H_DEV_IDENTITIES=1` and from localhost).
+  Everyone signs in at `/login`.
+- Sessions live server-side (SQLite); the cookie carries a signed random id. Sign-out revokes the session.
+- Every studio route requires `author`; every state-changing request must come from our own origin.
+- `db_user` is the Teradata PROXYUSER, validated by `auth`; without it an identity gets no Teradata data.
 - For Teradata, only `oidc` identities map to `PROXYUSER`; a local identity gets no Teradata data in
   the viewer unless the author configures an explicit mapping.
 

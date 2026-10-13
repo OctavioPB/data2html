@@ -11,6 +11,31 @@ sources:
     mode: directquery
     schemas: [public]               # schemas visible in the catalog
     connect_timeout_s: 5
+  mysql_dev:
+    type: mysql
+    host: 127.0.0.1
+    port: 3306
+    database: d2h                   # the only visible schema: tables are listed as d2h.<table>
+    user: d2h_reader
+    password_env: MYSQL_DEV_PASSWORD
+    ssl_mode: disabled              # development; use required / verify_identity in production
+  # DynamoDB (Import, ADR 0012): native export to S3 → Parquet. Run `python -m data2html.ingest dynamodb
+  # orders_ddb` from a scheduler (or "Export now" in the studio). Requires PITR on the table and
+  # `pip install -e ".[dynamodb]"`. AWS credentials come from the standard chain (role/env/profile), never here.
+  # orders_ddb:
+  #   type: dynamodb_export
+  #   region: us-east-1
+  #   tables:
+  #     pedidos:                                   # table name in the catalog
+  #       table_arn: arn:aws:dynamodb:us-east-1:123456789012:table/Orders
+  #       s3_bucket: my-d2h-exports
+  #       s3_prefix: data2html/orders
+  #       columns:                                 # only these attributes are imported
+  #         pedido_id: { path: pk }
+  #         fecha:     { path: created_at, type: DATE }
+  #         monto:     { path: amount, type: "DECIMAL(12,2)" }
+  #         region:    { path: customer.region }   # nested map
+  #         items:     { path: items, type: JSON } # lists, sets and maps as JSON text
   # Teradata arrives in Phase 7; today any type other than postgres is a validation error.
   # teradata_prod:
   #   type: teradata

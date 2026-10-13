@@ -16,7 +16,7 @@ import duckdb
 from data2html.settings import Settings
 from data2html.sources.engine import ensure_extension, sql_literal
 
-EXTENSIONS = ("postgres",)
+EXTENSIONS = ("postgres", "mysql")
 
 
 def demo(rows: int = 5_000_000) -> None:

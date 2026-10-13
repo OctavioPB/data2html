@@ -210,6 +210,42 @@
         }
       }
     },
+    "/api/catalog/{source}/refresh": {
+      "post": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Refresh Source",
+        "description": "Re-read a remote source's schema: DuckDB caches the attached catalog, so new tables or columns\nonly appear after reconnecting. A no-op for sources that read their catalog on every call.",
+        "operationId": "refresh_source_api_catalog__source__refresh_post",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/csv/preview": {
       "post": {
         "tags": [
@@ -960,6 +996,413 @@
         }
       }
     },
+    "/api/visual/export.csv": {
+      "post": {
+        "tags": [
+          "visual"
+        ],
+        "summary": "Visual Export Csv",
+        "description": "The builder's/editor's visual as a CSV download (aggregated rows, as previewed by the author).",
+        "operationId": "visual_export_csv_api_visual_export_csv_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VisualRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/csv": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "List Reports",
+        "operationId": "list_reports_api_reports_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/{report_id}": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Get Report",
+        "operationId": "get_report_api_reports__report_id__get",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportEntry"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Put Report",
+        "description": "Validate and publish. A report that does not validate is never written.",
+        "operationId": "put_report_api_reports__report_id__put",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Report"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportEntry"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Delete Report",
+        "operationId": "delete_report_api_reports__report_id__delete",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ingest/{source}": {
+      "get": {
+        "tags": [
+          "ingest"
+        ],
+        "summary": "Ingest Status",
+        "operationId": "ingest_status_api_ingest__source__get",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ingest/{source}/{table}": {
+      "post": {
+        "tags": [
+          "ingest"
+        ],
+        "summary": "Start Ingest",
+        "operationId": "start_ingest_api_ingest__source___table__post",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Table"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Me",
+        "operationId": "me_api_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/r/{report_id}/visuals/{visual_id}.csv": {
+      "get": {
+        "tags": [
+          "viewer"
+        ],
+        "summary": "Visual Csv",
+        "description": "The same rows the reader sees (RLS, parameters, cross-filters), as a CSV download.",
+        "operationId": "visual_csv_api_r__report_id__visuals__visual_id__csv_get",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "title": "Report Id"
+            }
+          },
+          {
+            "name": "visual_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "title": "Visual Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/r/{report_id}/visuals/{visual_id}": {
+      "get": {
+        "tags": [
+          "viewer"
+        ],
+        "summary": "Visual Data",
+        "operationId": "visual_data_api_r__report_id__visuals__visual_id__get",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "title": "Report Id"
+            }
+          },
+          {
+            "name": "visual_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "title": "Visual Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisualData"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -971,6 +1414,25 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/theme": {
+      "get": {
+        "summary": "Theme",
+        "description": "Palette, font and currency of `config/theme.yaml`, shared by the studio and the viewer.",
+        "operationId": "theme_api_theme_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Theme"
                 }
               }
             }
@@ -1568,33 +2030,6 @@
         ],
         "title": "Compat"
       },
-      "ComputedColumn": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "pattern": "^[a-z_][a-z0-9_]{0,62}$",
-            "title": "Name"
-          },
-          "expr": {
-            "type": "string",
-            "maxLength": 2000,
-            "minLength": 1,
-            "title": "Expr"
-          },
-          "type": {
-            "type": "string",
-            "title": "Type",
-            "default": ""
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "name",
-          "expr"
-        ],
-        "title": "ComputedColumn"
-      },
       "ComputedIn": {
         "properties": {
           "name": {
@@ -1616,6 +2051,38 @@
           "expr"
         ],
         "title": "ComputedIn"
+      },
+      "ComputedOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z_][a-z0-9_]{0,62}$",
+            "title": "Name"
+          },
+          "expr": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Expr"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": ""
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "expr"
+        ],
+        "title": "ComputedOut"
       },
       "ConfirmRequest": {
         "properties": {
@@ -2188,6 +2655,94 @@
         ],
         "title": "HistoryEntry"
       },
+      "IngestStatus": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "tables": {
+            "items": {
+              "$ref": "#/components/schemas/TableStatus"
+            },
+            "type": "array",
+            "title": "Tables"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "tables"
+        ],
+        "title": "IngestStatus"
+      },
+      "LastExport": {
+        "properties": {
+          "finished_at": {
+            "type": "string",
+            "title": "Finished At"
+          },
+          "export_time": {
+            "type": "string",
+            "title": "Export Time"
+          },
+          "rows": {
+            "type": "integer",
+            "title": "Rows"
+          },
+          "warnings": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Warnings"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "finished_at",
+          "export_time",
+          "rows",
+          "warnings"
+        ],
+        "title": "LastExport"
+      },
+      "Layout": {
+        "properties": {
+          "x": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Y"
+          },
+          "w": {
+            "type": "integer",
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "W"
+          },
+          "h": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "H"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "x",
+          "y",
+          "w",
+          "h"
+        ],
+        "title": "Layout"
+      },
       "Mark": {
         "type": "string",
         "enum": [
@@ -2198,6 +2753,43 @@
           "pie"
         ],
         "title": "Mark"
+      },
+      "Me": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "groups": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Groups"
+          },
+          "author": {
+            "type": "boolean",
+            "title": "Author"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "user_id",
+          "email",
+          "provider",
+          "groups",
+          "author"
+        ],
+        "title": "Me"
       },
       "Measure": {
         "properties": {
@@ -2237,6 +2829,14 @@
           "percent"
         ],
         "title": "MeasureFormat"
+      },
+      "Mode": {
+        "type": "string",
+        "enum": [
+          "live",
+          "snapshot"
+        ],
+        "title": "Mode"
       },
       "ModelEntry": {
         "properties": {
@@ -2313,6 +2913,88 @@
         ],
         "title": "Outliers"
       },
+      "Palette": {
+        "properties": {
+          "light": {
+            "items": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Light"
+          },
+          "dark": {
+            "items": {
+              "type": "string",
+              "pattern": "^#[0-9a-fA-F]{6}$"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Dark"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "light",
+          "dark"
+        ],
+        "title": "Palette"
+      },
+      "Param": {
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/ParamType"
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default",
+            "description": "Initial value in the viewer"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Text for the viewer's control; the name if empty",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "title": "Param"
+      },
+      "ParamType": {
+        "type": "string",
+        "enum": [
+          "int",
+          "float",
+          "str",
+          "date",
+          "bool"
+        ],
+        "title": "ParamType"
+      },
       "PeriodCount": {
         "properties": {
           "period": {
@@ -2349,6 +3031,131 @@
           "message"
         ],
         "title": "ProfileWarning"
+      },
+      "Report": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,62}$",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "semantic_model": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,62}$",
+            "title": "Semantic Model"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/Mode",
+            "description": "live: every view queries the source. snapshot: each reader's data (with their RLS) is computed once and kept until the report is republished or `refresh_hours` pass",
+            "default": "live"
+          },
+          "refresh_hours": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2160.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refresh Hours",
+            "description": "snapshot only: hours after which a reader's snapshot is recomputed; empty = until the report is republished"
+          },
+          "params": {
+            "patternProperties": {
+              "^[a-z][a-z0-9_]{0,62}$": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ParamType"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Param"
+                  }
+                ]
+              }
+            },
+            "type": "object",
+            "title": "Params",
+            "description": "parameter → type, or {type, default, label}"
+          },
+          "access": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Access",
+            "description": "Groups allowed to open the report; empty = any authenticated reader",
+            "default": []
+          },
+          "visuals": {
+            "items": {
+              "$ref": "#/components/schemas/Visual"
+            },
+            "type": "array",
+            "title": "Visuals"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "semantic_model",
+          "visuals"
+        ],
+        "title": "Report"
+      },
+      "ReportEntry": {
+        "properties": {
+          "report": {
+            "$ref": "#/components/schemas/Report"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "report",
+          "errors"
+        ],
+        "title": "ReportEntry"
+      },
+      "ReportList": {
+        "properties": {
+          "reports": {
+            "items": {
+              "$ref": "#/components/schemas/ReportEntry"
+            },
+            "type": "array",
+            "title": "Reports"
+          },
+          "broken": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Broken"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reports",
+          "broken"
+        ],
+        "title": "ReportList"
       },
       "RlsRule": {
         "properties": {
@@ -2769,7 +3576,7 @@
           },
           "computed": {
             "items": {
-              "$ref": "#/components/schemas/ComputedColumn"
+              "$ref": "#/components/schemas/ComputedOut"
             },
             "type": "array",
             "title": "Computed"
@@ -2856,6 +3663,92 @@
         ],
         "title": "TableProfile"
       },
+      "TableStatus": {
+        "properties": {
+          "table": {
+            "type": "string",
+            "title": "Table"
+          },
+          "running": {
+            "type": "boolean",
+            "title": "Running"
+          },
+          "last": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LastExport"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "table",
+          "running",
+          "last",
+          "error"
+        ],
+        "title": "TableStatus"
+      },
+      "Theme": {
+        "properties": {
+          "font": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9 ,'\\-]{1,200}$",
+            "title": "Font",
+            "default": "system-ui, sans-serif"
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "default": "MXN"
+          },
+          "palette": {
+            "$ref": "#/components/schemas/Palette",
+            "default": {
+              "light": [
+                "#2a78d6",
+                "#eb6834",
+                "#1baf7a",
+                "#eda100",
+                "#e87ba4",
+                "#008300",
+                "#6250d6",
+                "#e34948"
+              ],
+              "dark": [
+                "#3987e5",
+                "#d95926",
+                "#199e70",
+                "#c98500",
+                "#d55181",
+                "#008300",
+                "#9085e9",
+                "#e66767"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Theme"
+      },
       "TimeGrain": {
         "type": "string",
         "enum": [
@@ -2925,6 +3818,146 @@
           "count"
         ],
         "title": "ValueCount"
+      },
+      "Visual": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,62}$",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "mark": {
+            "$ref": "#/components/schemas/Mark"
+          },
+          "measure": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,62}$",
+            "title": "Measure"
+          },
+          "dimension": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,62}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dimension"
+          },
+          "time_grain": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimeGrain"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Groups a temporal dimension by period (date_trunc)"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,62}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "filters": {
+            "items": {
+              "$ref": "#/components/schemas/Filter"
+            },
+            "type": "array",
+            "title": "Filters",
+            "default": []
+          },
+          "layout": {
+            "$ref": "#/components/schemas/Layout"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "mark",
+          "measure",
+          "layout"
+        ],
+        "title": "Visual"
+      },
+      "VisualData": {
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ExploreColumn"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "rows": {
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "allowed_marks": {
+            "items": {
+              "$ref": "#/components/schemas/Mark"
+            },
+            "type": "array",
+            "title": "Allowed Marks"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "columns",
+          "rows",
+          "allowed_marks"
+        ],
+        "title": "VisualData"
       },
       "VisualDraft": {
         "properties": {
@@ -3018,6 +4051,15 @@
             },
             "type": "object",
             "title": "Params"
+          },
+          "param_types": {
+            "patternProperties": {
+              "^[a-z][a-z0-9_]{0,62}$": {
+                "$ref": "#/components/schemas/ParamType"
+              }
+            },
+            "type": "object",
+            "title": "Param Types"
           }
         },
         "additionalProperties": false,
@@ -3063,16 +4105,27 @@
             "type": "array",
             "title": "Rows"
           },
-          "sql": {
-            "type": "string",
-            "title": "Sql"
-          },
           "allowed_marks": {
             "items": {
               "$ref": "#/components/schemas/Mark"
             },
             "type": "array",
             "title": "Allowed Marks"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "sql": {
+            "type": "string",
+            "title": "Sql"
           }
         },
         "additionalProperties": false,
@@ -3080,8 +4133,8 @@
         "required": [
           "columns",
           "rows",
-          "sql",
-          "allowed_marks"
+          "allowed_marks",
+          "sql"
         ],
         "title": "VisualResult"
       },

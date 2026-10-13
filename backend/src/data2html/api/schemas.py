@@ -27,19 +27,24 @@ class ColumnOut(_Out):
     description: str
 
 
+class ComputedOut(ComputedColumn):
+    description: str = ""  # editable in the Schema tab, like a physical column's
+
+
 class TableOut(_Out):
     name: str
     description: str
     row_count: int | None
     columns: list[ColumnOut]
-    computed: list[ComputedColumn]
+    computed: list[ComputedOut]
 
     @classmethod
     def of(cls, t: TableInfo, meta: TableMeta) -> TableOut:
         return cls(
             name=t.name, description=t.description, row_count=t.row_count,
             columns=[ColumnOut(name=c.name, type=c.type, description=c.description) for c in t.columns],
-            computed=meta.computed,
+            computed=[ComputedOut(**c.model_dump(), description=meta.columns.get(c.name, ""))
+                      for c in meta.computed],
         )
 
 

@@ -31,9 +31,17 @@ if `api.ts` does not match `openapi.json`. When changing the API: dump the OpenA
 - Every API request sends `Accept-Language`; switching language invalidates the query cache so server
   messages (warnings, errors) come back in the new language.
 
+## Reports (Phase 6)
+
+*Reports* lists the published reports (`content/reports/`); the editor arranges visuals on a 12-column grid
+(react-grid-layout) and edits parameters and access groups. «Add to report…» in the visual builder appends
+the current visual. Saving validates on the server and publishes; «Open viewer» opens `/r/<id>` (proxied to
+the backend in development, like `/dev/login`).
+
 ## Pinned versions
 
 - TypeScript `~5.9`: `openapi-typescript` 7 does not support TS 6 yet.
+- react-grid-layout `~2.2.4` (2.3.0 was only a week old when added).
 - React `18.3`: Glide Data Grid 6.0.3 (stable) declares React ≤ 18; its React 19 support only exists in
   6.0.4-alpha. Move to React 19 when a stable 6.x that declares it ships.
 

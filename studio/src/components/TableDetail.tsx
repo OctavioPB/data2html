@@ -52,11 +52,10 @@ function TableForm({ tableRef, table }: { tableRef: TableRef; table: Schemas['Ta
   const t = useT()
   const patch = usePatchDescriptions(tableRef.source, tableRef.table)
   const [description, setDescription] = useState(table.description)
-  const [columns, setColumns] = useState(() =>
-    Object.fromEntries(table.columns.map((c) => [c.name, c.description])),
-  )
-  const dirty =
-    description !== table.description || table.columns.some((c) => columns[c.name] !== c.description)
+  // physical and computed columns share the descriptions map (the API accepts both)
+  const all = [...table.columns, ...table.computed]
+  const [columns, setColumns] = useState(() => Object.fromEntries(all.map((c) => [c.name, c.description])))
+  const dirty = description !== table.description || all.some((c) => columns[c.name] !== c.description)
 
   return (
     <form
@@ -94,6 +93,23 @@ function TableForm({ tableRef, table }: { tableRef: TableRef; table: Schemas['Ta
                 <input
                   maxLength={2000}
                   value={columns[c.name] ?? ''}
+                  aria-label={t('schema.columnDescription', { name: c.name })}
+                  onChange={(e) => setColumns({ ...columns, [c.name]: e.target.value })}
+                />
+              </td>
+            </tr>
+          ))}
+          {table.computed.map((c) => (
+            <tr key={c.name} className="computed-row">
+              <td className="mono">
+                {c.name} <span className="muted small" title={c.expr}>ƒ {t('schema.computed')}</span>
+              </td>
+              <td className="mono muted">{c.type}</td>
+              <td>
+                <input
+                  maxLength={2000}
+                  value={columns[c.name] ?? ''}
+                  placeholder={c.expr}
                   aria-label={t('schema.columnDescription', { name: c.name })}
                   onChange={(e) => setColumns({ ...columns, [c.name]: e.target.value })}
                 />

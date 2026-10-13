@@ -115,6 +115,17 @@ def test_rls_filters_by_reader_groups(db):
     assert rows == []
 
 
+def test_rls_exact_recheck_for_loose_collation_sources(db):
+    # MySQL (loose_collation): the pushed-down IN stays, plus a copy DuckDB cannot push down
+    reader = Identity(user_id="u1", email="u1@x", provider="local", groups=("Norte",))
+    rows, q = run(db, visual(dimension="region"), model=RLS_MODEL, identity=reader, author_preview=False,
+                  rls_exact_recheck=True)
+    assert [r[0] for r in rows] == ["Norte"]
+    assert "(\"region_desc\" || '') IN ($p0)" in q.sql and q.params == {"p0": "Norte"}
+    _, plain = run(db, visual(dimension="region"), model=RLS_MODEL, identity=reader, author_preview=False)
+    assert "||" not in plain.sql
+
+
 def test_unknown_names(db):
     with pytest.raises(VisualQueryError):
         run(db, visual(measure="margen"))

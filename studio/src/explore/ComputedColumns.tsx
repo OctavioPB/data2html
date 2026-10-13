@@ -9,7 +9,7 @@ const NAME_RE = /^[a-z_][a-z0-9_]{0,62}$/
 interface Props {
   source: string
   table: string
-  computed: Schemas['ComputedColumn'][]
+  computed: Schemas['ComputedOut'][]
 }
 
 /** Computed columns: scalar SQL expressions over the table's columns. */
@@ -21,7 +21,7 @@ export function ComputedColumns({ source, table, computed }: Props) {
   const [name, setName] = useState('')
   const [expr, setExpr] = useState('')
 
-  const edit = (c?: Schemas['ComputedColumn']) => {
+  const edit = (c?: Schemas['ComputedOut']) => {
     setName(c?.name ?? '')
     setExpr(c?.expr ?? '')
     put.reset()

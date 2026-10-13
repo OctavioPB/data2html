@@ -71,8 +71,8 @@ pbix importer ─────────┘         ▲
 ## Commands
 
 ```bash
-docker compose up -d postgres          # development source
+docker compose up -d postgres mysql    # development sources
 cd backend && pip install -e ".[dev]" && pytest -q
-uvicorn data2html.api.main:app --reload
+D2H_DEV_IDENTITIES=1 uvicorn data2html.api.main:app --reload   # sign in as "autor" (localhost only)
 cd studio && npm install && npm run dev
 ```

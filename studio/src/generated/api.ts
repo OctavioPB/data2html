@@ -78,6 +78,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalog/{source}/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh Source
+         * @description Re-read a remote source's schema: DuckDB caches the attached catalog, so new tables or columns
+         *     only appear after reconnecting. A no-op for sources that read their catalog on every call.
+         */
+        post: operations["refresh_source_api_catalog__source__refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/csv/preview": {
         parameters: {
             query?: never;
@@ -348,6 +369,153 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/visual/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Visual Export Csv
+         * @description The builder's/editor's visual as a CSV download (aggregated rows, as previewed by the author).
+         */
+        post: operations["visual_export_csv_api_visual_export_csv_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Reports */
+        get: operations["list_reports_api_reports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/{report_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Report */
+        get: operations["get_report_api_reports__report_id__get"];
+        /**
+         * Put Report
+         * @description Validate and publish. A report that does not validate is never written.
+         */
+        put: operations["put_report_api_reports__report_id__put"];
+        post?: never;
+        /** Delete Report */
+        delete: operations["delete_report_api_reports__report_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ingest/{source}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ingest Status */
+        get: operations["ingest_status_api_ingest__source__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ingest/{source}/{table}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Ingest */
+        post: operations["start_ingest_api_ingest__source___table__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Me */
+        get: operations["me_api_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/r/{report_id}/visuals/{visual_id}.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Visual Csv
+         * @description The same rows the reader sees (RLS, parameters, cross-filters), as a CSV download.
+         */
+        get: operations["visual_csv_api_r__report_id__visuals__visual_id__csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/r/{report_id}/visuals/{visual_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Visual Data */
+        get: operations["visual_data_api_r__report_id__visuals__visual_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -357,6 +525,26 @@ export interface paths {
         };
         /** Health */
         get: operations["health_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/theme": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Theme
+         * @description Palette, font and currency of `config/theme.yaml`, shared by the studio and the viewer.
+         */
+        get: operations["theme_api_theme_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -525,8 +713,15 @@ export interface components {
             /** Marks */
             marks: components["schemas"]["Mark"][];
         };
-        /** ComputedColumn */
-        ComputedColumn: {
+        /** ComputedIn */
+        ComputedIn: {
+            /** Name */
+            name: string;
+            /** Expr */
+            expr: string;
+        };
+        /** ComputedOut */
+        ComputedOut: {
             /** Name */
             name: string;
             /** Expr */
@@ -536,13 +731,11 @@ export interface components {
              * @default
              */
             type: string;
-        };
-        /** ComputedIn */
-        ComputedIn: {
-            /** Name */
-            name: string;
-            /** Expr */
-            expr: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
         };
         /** ConfirmRequest */
         ConfirmRequest: {
@@ -730,11 +923,55 @@ export interface components {
             /** Error */
             error?: string | null;
         };
+        /** IngestStatus */
+        IngestStatus: {
+            /** Source */
+            source: string;
+            /** Tables */
+            tables: components["schemas"]["TableStatus"][];
+        };
+        /** LastExport */
+        LastExport: {
+            /** Finished At */
+            finished_at: string;
+            /** Export Time */
+            export_time: string;
+            /** Rows */
+            rows: number;
+            /** Warnings */
+            warnings: {
+                [key: string]: number;
+            };
+        };
+        /** Layout */
+        Layout: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** W */
+            w: number;
+            /** H */
+            h: number;
+        };
         /**
          * Mark
          * @enum {string}
          */
         Mark: "table" | "kpi" | "bar" | "line" | "pie";
+        /** Me */
+        Me: {
+            /** User Id */
+            user_id: string;
+            /** Email */
+            email: string;
+            /** Provider */
+            provider: string;
+            /** Groups */
+            groups: string[];
+            /** Author */
+            author: boolean;
+        };
         /** Measure */
         Measure: {
             /**
@@ -757,6 +994,11 @@ export interface components {
          * @enum {string}
          */
         MeasureFormat: "number" | "currency" | "percent";
+        /**
+         * Mode
+         * @enum {string}
+         */
+        Mode: "live" | "snapshot";
         /** ModelEntry */
         ModelEntry: {
             model: components["schemas"]["SemanticModel"];
@@ -783,6 +1025,33 @@ export interface components {
             /** Above */
             above: number;
         };
+        /** Palette */
+        Palette: {
+            /** Light */
+            light: string[];
+            /** Dark */
+            dark: string[];
+        };
+        /** Param */
+        Param: {
+            type: components["schemas"]["ParamType"];
+            /**
+             * Default
+             * @description Initial value in the viewer
+             */
+            default?: string | number | boolean | null;
+            /**
+             * Label
+             * @description Text for the viewer's control; the name if empty
+             * @default
+             */
+            label: string;
+        };
+        /**
+         * ParamType
+         * @enum {string}
+         */
+        ParamType: "int" | "float" | "str" | "date" | "bool";
         /** PeriodCount */
         PeriodCount: {
             /** Period */
@@ -795,6 +1064,55 @@ export interface components {
             code: components["schemas"]["WarningCode"];
             /** Message */
             message: string;
+        };
+        /** Report */
+        Report: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Semantic Model */
+            semantic_model: string;
+            /**
+             * @description live: every view queries the source. snapshot: each reader's data (with their RLS) is computed once and kept until the report is republished or `refresh_hours` pass
+             * @default live
+             */
+            mode: components["schemas"]["Mode"];
+            /**
+             * Refresh Hours
+             * @description snapshot only: hours after which a reader's snapshot is recomputed; empty = until the report is republished
+             */
+            refresh_hours?: number | null;
+            /**
+             * Params
+             * @description parameter → type, or {type, default, label}
+             */
+            params?: {
+                [key: string]: components["schemas"]["ParamType"] | components["schemas"]["Param"];
+            };
+            /**
+             * Access
+             * @description Groups allowed to open the report; empty = any authenticated reader
+             * @default []
+             */
+            access: string[];
+            /** Visuals */
+            visuals: components["schemas"]["Visual"][];
+        };
+        /** ReportEntry */
+        ReportEntry: {
+            report: components["schemas"]["Report"];
+            /** Errors */
+            errors: string[];
+        };
+        /** ReportList */
+        ReportList: {
+            /** Reports */
+            reports: components["schemas"]["ReportEntry"][];
+            /** Broken */
+            broken: {
+                [key: string]: string;
+            };
         };
         /**
          * RlsRule
@@ -943,7 +1261,7 @@ export interface components {
             /** Columns */
             columns: components["schemas"]["ColumnOut"][];
             /** Computed */
-            computed: components["schemas"]["ComputedColumn"][];
+            computed: components["schemas"]["ComputedOut"][];
         };
         /** TableProfile */
         TableProfile: {
@@ -964,6 +1282,54 @@ export interface components {
             elapsed_ms: number;
             /** Profiled At */
             profiled_at: string;
+        };
+        /** TableStatus */
+        TableStatus: {
+            /** Table */
+            table: string;
+            /** Running */
+            running: boolean;
+            last: components["schemas"]["LastExport"] | null;
+            /** Error */
+            error: string | null;
+        };
+        /** Theme */
+        Theme: {
+            /**
+             * Font
+             * @default system-ui, sans-serif
+             */
+            font: string;
+            /**
+             * Currency
+             * @default MXN
+             */
+            currency: string;
+            /**
+             * @default {
+             *       "light": [
+             *         "#2a78d6",
+             *         "#eb6834",
+             *         "#1baf7a",
+             *         "#eda100",
+             *         "#e87ba4",
+             *         "#008300",
+             *         "#6250d6",
+             *         "#e34948"
+             *       ],
+             *       "dark": [
+             *         "#3987e5",
+             *         "#d95926",
+             *         "#199e70",
+             *         "#c98500",
+             *         "#d55181",
+             *         "#008300",
+             *         "#9085e9",
+             *         "#e66767"
+             *       ]
+             *     }
+             */
+            palette: components["schemas"]["Palette"];
         };
         /**
          * TimeGrain
@@ -990,6 +1356,39 @@ export interface components {
             /** Count */
             count: number;
         };
+        /** Visual */
+        Visual: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            mark: components["schemas"]["Mark"];
+            /** Measure */
+            measure: string;
+            /** Dimension */
+            dimension?: string | null;
+            /** @description Groups a temporal dimension by period (date_trunc) */
+            time_grain?: components["schemas"]["TimeGrain"] | null;
+            /** Color */
+            color?: string | null;
+            /**
+             * Filters
+             * @default []
+             */
+            filters: components["schemas"]["Filter"][];
+            layout: components["schemas"]["Layout"];
+        };
+        /** VisualData */
+        VisualData: {
+            /** Columns */
+            columns: components["schemas"]["ExploreColumn"][];
+            /** Rows */
+            rows: (string | number | boolean | null)[][];
+            /** Allowed Marks */
+            allowed_marks: components["schemas"]["Mark"][];
+            /** As Of */
+            as_of?: string | null;
+        };
         /**
          * VisualDraft
          * @description What the builder assembles: a Visual without id/title/layout (those come with reports, Phase 6).
@@ -1015,6 +1414,10 @@ export interface components {
             params?: {
                 [key: string]: string | number | boolean;
             };
+            /** Param Types */
+            param_types?: {
+                [key: string]: components["schemas"]["ParamType"];
+            };
         };
         /** VisualResult */
         VisualResult: {
@@ -1022,10 +1425,12 @@ export interface components {
             columns: components["schemas"]["ExploreColumn"][];
             /** Rows */
             rows: (string | number | boolean | null)[][];
-            /** Sql */
-            sql: string;
             /** Allowed Marks */
             allowed_marks: components["schemas"]["Mark"][];
+            /** As Of */
+            as_of?: string | null;
+            /** Sql */
+            sql: string;
         };
         /**
          * WarningCode
@@ -1154,6 +1559,35 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["TableOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_source_api_catalog__source__refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1712,6 +2146,301 @@ export interface operations {
             };
         };
     };
+    visual_export_csv_api_visual_export_csv_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VisualRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_reports_api_reports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportList"];
+                };
+            };
+        };
+    };
+    get_report_api_reports__report_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportEntry"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_report_api_reports__report_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Report"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportEntry"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_report_api_reports__report_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ingest_status_api_ingest__source__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_ingest_api_ingest__source___table__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source: string;
+                table: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestStatus"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    me_api_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+        };
+    };
+    visual_csv_api_r__report_id__visuals__visual_id__csv_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+                visual_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    visual_data_api_r__report_id__visuals__visual_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+                visual_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VisualData"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     health_health_get: {
         parameters: {
             query?: never;
@@ -1728,6 +2457,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    theme_api_theme_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Theme"];
                 };
             };
         };

@@ -212,6 +212,58 @@
       "title": "Mode",
       "type": "string"
     },
+    "Param": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/ParamType"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Initial value in the viewer",
+          "title": "Default"
+        },
+        "label": {
+          "default": "",
+          "description": "Text for the viewer's control; the name if empty",
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "Param",
+      "type": "object"
+    },
+    "ParamType": {
+      "enum": [
+        "int",
+        "float",
+        "str",
+        "date",
+        "bool"
+      ],
+      "title": "ParamType",
+      "type": "string"
+    },
     "Report": {
       "additionalProperties": false,
       "properties": {
@@ -231,17 +283,49 @@
         },
         "mode": {
           "$ref": "#/$defs/Mode",
-          "default": "live"
+          "default": "live",
+          "description": "live: every view queries the source. snapshot: each reader's data (with their RLS) is computed once and kept until the report is republished or `refresh_hours` pass"
+        },
+        "refresh_hours": {
+          "anyOf": [
+            {
+              "maximum": 2160,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "snapshot only: hours after which a reader's snapshot is recomputed; empty = until the report is republished",
+          "title": "Refresh Hours"
         },
         "params": {
-          "description": "parameter → type",
+          "description": "parameter → type, or {type, default, label}",
           "patternProperties": {
             "^[a-z][a-z0-9_]{0,62}$": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ParamType"
+                },
+                {
+                  "$ref": "#/$defs/Param"
+                }
+              ]
             }
           },
           "title": "Params",
           "type": "object"
+        },
+        "access": {
+          "default": [],
+          "description": "Groups allowed to open the report; empty = any authenticated reader",
+          "items": {
+            "type": "string"
+          },
+          "title": "Access",
+          "type": "array"
         },
         "visuals": {
           "items": {

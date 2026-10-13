@@ -96,3 +96,15 @@ def test_computed_rejected(client, body, msg):
 ])
 def test_to_cell(value, cell):
     assert to_cell(value) == cell
+
+
+def test_computed_column_descriptions_round_trip(client):
+    r = client.put("/api/catalog/csv/ventas/computed", json={"name": "neto", "expr": "monto - 1"})
+    assert r.status_code == 200, r.text
+    r = client.patch("/api/catalog/csv/ventas", json={"columns": {"neto": "Monto menos un peso"}})
+    assert r.status_code == 200, r.text
+    (neto,) = r.json()["computed"]
+    assert (neto["name"], neto["description"]) == ("neto", "Monto menos un peso")
+    cat = next(s for s in client.get("/api/catalog").json()["sources"] if s["id"] == "csv")
+    ventas = next(t for t in cat["tables"] if t["name"] == "ventas")
+    assert ventas["computed"][0]["description"] == "Monto menos un peso"

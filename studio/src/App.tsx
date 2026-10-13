@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 
 import { ApiStatus } from './components/ApiStatus'
+import { AuthGate, UserMenu } from './components/AuthGate'
 import { CsvUpload } from './components/CsvUpload'
 import { LanguageSwitch } from './components/LanguageSwitch'
 import { Sidebar } from './components/Sidebar'
@@ -8,9 +9,10 @@ import { TableDetail } from './components/TableDetail'
 import { useT } from './i18n'
 import { useStudio } from './store'
 
-// CodeMirror + ECharts are only downloaded when the SQL editor or the models view is opened
+// CodeMirror + ECharts (and react-grid-layout) are only downloaded when a view that uses them is opened
 const SqlEditor = lazy(() => import('./sql/SqlEditor').then((m) => ({ default: m.SqlEditor })))
 const ModelsView = lazy(() => import('./semantic/ModelsView').then((m) => ({ default: m.ModelsView })))
+const ReportsView = lazy(() => import('./reports/ReportsView').then((m) => ({ default: m.ReportsView })))
 
 export function App() {
   const t = useT()
@@ -23,9 +25,11 @@ export function App() {
         <h1>data2html</h1>
         <div className="topbar-right">
           <ApiStatus />
+          <UserMenu />
           <LanguageSwitch />
         </div>
       </header>
+      <AuthGate>
       <Sidebar />
       <main className="workspace">
         {view === 'sql' ? (
@@ -36,6 +40,10 @@ export function App() {
           <Suspense fallback={<p className="muted">{t('common.loading')}</p>}>
             <ModelsView />
           </Suspense>
+        ) : view === 'reports' ? (
+          <Suspense fallback={<p className="muted">{t('common.loading')}</p>}>
+            <ReportsView />
+          </Suspense>
         ) : selected ? (
           <TableDetail tableRef={selected} />
         ) : (
@@ -43,6 +51,7 @@ export function App() {
         )}
       </main>
       {uploading && <CsvUpload />}
+      </AuthGate>
     </div>
   )
 }

@@ -29,8 +29,10 @@ class Identity:
 
     user_id: str
     email: str
-    provider: str  # "local" | "oidc"
-    groups: tuple[str, ...] = field(default_factory=tuple)
+    provider: str  # "local" | "oidc" | "dev" (development identities, localhost only)
+    groups: tuple[str, ...] = field(default_factory=tuple)  # feed RLS and report `access`
+    author: bool = False  # may use the studio (single author, ADR 0005)
+    db_user: str | None = None  # Teradata PROXYUSER; validated by auth, None = no Teradata data
 
 
 @runtime_checkable

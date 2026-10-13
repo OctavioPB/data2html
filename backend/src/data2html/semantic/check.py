@@ -10,6 +10,7 @@ import duckdb
 from sqlglot import exp
 
 from data2html.i18n import tr
+from data2html.scrub import scrub
 from data2html.sources.base import DataSource, TableInfo
 from data2html.sources.errors import QueryInterrupted, SourceError, SourceUnavailable
 from data2html.spec import SemanticModel
@@ -19,7 +20,7 @@ from data2html.sqlgen.visual import measure_expr, table_expr
 
 
 def check_model(model: SemanticModel, src: DataSource, *, run_measures: bool = True,
-                timeout_s: int = 30) -> list[str]:
+                timeout_s: int = 30, computed: dict[str, str] | None = None) -> list[str]:
     """Errors, one per problem. Empty list = the model works against the source."""
     try:
         info: TableInfo = src.table_info(model.table)
@@ -30,12 +31,17 @@ def check_model(model: SemanticModel, src: DataSource, *, run_measures: bool = T
         return [tr("could not validate against the source: {error}", error=e)]
 
     columns = {c.name for c in info.columns}
+    computed = computed or {}
     errors: list[str] = []
     for name, dim in model.dimensions.items():
-        if dim.column not in columns:
+        if dim.column not in columns and dim.column not in computed:
             errors.append(tr("dimension '{name}': column '{column}' does not exist in {table}",
                              name=name, column=dim.column, table=model.table))
-    if model.rls is not None and model.rls.column not in columns:
+    if model.rls is not None and model.rls.column in computed:
+        # row security is never based on an expression someone can edit in the explorer
+        errors.append(tr("rls: '{column}' is a computed column; RLS needs a physical column",
+                         column=model.rls.column))
+    elif model.rls is not None and model.rls.column not in columns:
         errors.append(tr("rls: column '{column}' does not exist in {table}",
                          column=model.rls.column, table=model.table))
     runnable: list[str] = []
@@ -55,7 +61,7 @@ def check_model(model: SemanticModel, src: DataSource, *, run_measures: bool = T
             try:
                 src.execute(q.sql("duckdb"), {}, identity=None, timeout_s=timeout_s)
             except (duckdb.Error, UnsafeSQL) as e:
-                errors.append(tr("measure '{name}': {error}", name=name, error=str(e).splitlines()[0]))
+                errors.append(tr("measure '{name}': {error}", name=name, error=scrub(str(e).splitlines()[0])))
             except (SourceUnavailable, QueryInterrupted) as e:
                 errors.append(tr("measure '{name}': could not be tested ({error})", name=name, error=e))
     return errors

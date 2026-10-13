@@ -13,7 +13,7 @@ import io
 import json
 import os
 import re
-import threading
+import time
 import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -21,24 +21,25 @@ from pathlib import Path
 from typing import BinaryIO
 
 import duckdb
-import pyarrow as pa
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from data2html.i18n import tr
 from data2html.settings import Settings
-from data2html.sources.base import ColumnInfo, Identity, TableInfo
+from data2html.sources.base import TableInfo
 from data2html.sources.catalog_meta import CatalogMeta
-from data2html.sources.engine import new_duckdb, sql_ident, sql_literal
-from data2html.sources.errors import Conflict, Deadline, NotFound, SourceError, TooLarge
-from data2html.sqlgen.validate import ensure_single_select
+from data2html.sources.engine import sql_ident, sql_literal
+from data2html.sources.errors import Conflict, NotFound, SourceError, TooLarge
+from data2html.sources.parquet import TABLE_RE, ParquetSource
 
-TABLE_RE = re.compile(r"^[a-z_][a-z0-9_]{0,62}$")
 _UPLOAD_ID_RE = re.compile(r"^[0-9a-f]{32}$")
 SAMPLE_ROWS = 10_000
 PREVIEW_ROWS = 20
 
 
 # ------------------------------------------------------------------ API contract
+
+
+UPLOAD_TTL_S = 24 * 3600  # an upload is reviewed and confirmed within minutes; a day is generous
 
 
 class CsvType(StrEnum):
@@ -205,37 +206,31 @@ def _detect_encoding(path: Path) -> str:
 # ------------------------------------------------------------------ the source
 
 
-class CsvSource:
+class CsvSource(ParquetSource):
     """Parquet tables born from CSV files. Queries run in a DuckDB that can only see `csv_dir`."""
 
-    id = "csv"
     kind = "csv"
-    dialect = "duckdb"
 
     def __init__(self, settings: Settings, meta: CatalogMeta) -> None:
-        self._s = settings
-        self._meta = meta
-        self._running: dict[str, duckdb.DuckDBPyConnection] = {}
-        self._lock = threading.Lock()
-        settings.csv_dir.mkdir(parents=True, exist_ok=True)
+        super().__init__("csv", settings.csv_dir, settings, meta)
         settings.uploads_dir.mkdir(parents=True, exist_ok=True)
+        self.clean_uploads()
 
-    def _conn(self, *dirs: Path) -> duckdb.DuckDBPyConnection:
-        return new_duckdb(
-            allowed_dirs=dirs, memory_limit=self._s.duckdb_memory_limit, threads=self._s.duckdb_threads
-        )
-
-    def _parquet(self, table: str) -> Path:
-        if not TABLE_RE.match(table):
-            raise SourceError(tr("invalid table name: {name}", name=repr(table)))
-        return self._s.csv_dir / f"{table}.parquet"
-
-    def tables(self) -> list[str]:
-        return sorted(p.stem for p in self._s.csv_dir.glob("*.parquet") if TABLE_RE.match(p.stem))
+    def clean_uploads(self, *, now: float | None = None) -> int:
+        """Delete uploads that were neither confirmed nor cancelled within UPLOAD_TTL_S (a closed tab,
+        a crashed browser). Runs at start-up and on every new upload. Returns how many were removed."""
+        cutoff = (now if now is not None else time.time()) - UPLOAD_TTL_S
+        removed = 0
+        for f in self._s.uploads_dir.glob("*"):
+            if f.suffix in (".csv", ".json") and _UPLOAD_ID_RE.match(f.stem) and f.stat().st_mtime < cutoff:
+                f.unlink(missing_ok=True)
+                removed += f.suffix == ".csv"
+        return removed
 
     # -- upload ------------------------------------------------------------------
 
     def stage(self, src: BinaryIO, filename: str) -> str:
+        self.clean_uploads()
         upload_id = uuid.uuid4().hex
         dest = self._s.uploads_dir / f"{upload_id}.csv"
         limit = self._s.max_upload_mb * 1024 * 1024
@@ -319,7 +314,7 @@ class CsvSource:
             raise Conflict(tr("table {name} already exists", name=repr(req.table)))
         encoding = _detect_encoding(path)
         tmp = target.with_suffix(".parquet.tmp")
-        conn = self._conn(self._s.uploads_dir, self._s.csv_dir)
+        conn = self._conn(self._s.uploads_dir, self._dir)
         try:
             delim, _, reader = self._read_raw(conn, path, encoding)
             names = [r[0] for r in conn.execute(f"DESCRIBE SELECT * FROM {reader}").fetchall()]  # noqa: S608
@@ -351,64 +346,3 @@ class CsvSource:
         path, _ = self._upload(upload_id)
         path.unlink()
         path.with_suffix(".json").unlink()
-
-    # -- DataSource --------------------------------------------------------------
-
-    def table_info(self, table: str) -> TableInfo:
-        parquet = self._parquet(table)
-        if not parquet.exists():
-            raise NotFound(tr("unknown table: {name}", name=repr(table)))
-        meta = self._meta.get(self.id, table)
-        conn = self._conn(self._s.csv_dir)
-        try:
-            cols = conn.execute("DESCRIBE SELECT * FROM read_parquet(?)", [str(parquet)]).fetchall()
-            (count,) = conn.execute("SELECT count(*) FROM read_parquet(?)", [str(parquet)]).fetchone() or (0,)
-        finally:
-            conn.close()
-        return TableInfo(
-            name=table,
-            columns=tuple(ColumnInfo(n, t, meta.columns.get(n, "")) for n, t, *_ in cols),
-            row_count=int(count),
-            description=meta.description,
-        )
-
-    def catalog(self) -> list[TableInfo]:
-        return [self.table_info(t) for t in self.tables()]
-
-    def relation(self, name: str) -> tuple[str, ...]:
-        self._parquet(name)  # validates the name
-        return (name,)  # execute() creates one view per table
-
-    def execute(
-        self,
-        sql: str,
-        params: dict[str, object],
-        *,
-        identity: Identity | None,
-        timeout_s: int,
-        query_id: str | None = None,
-    ) -> pa.Table:
-        ensure_single_select(sql, self.dialect)
-        qid = query_id or uuid.uuid4().hex
-        conn = self._conn(self._s.csv_dir)
-        for t in self.tables():  # CREATE VIEW takes no parameters; t already passed TABLE_RE
-            path = sql_literal(str(self._parquet(t)))
-            conn.execute(f"CREATE VIEW {sql_ident(t)} AS SELECT * FROM read_parquet({path})")  # noqa: S608
-        with self._lock:
-            self._running[qid] = conn
-        deadline = Deadline(timeout_s, conn.interrupt)
-        try:
-            with deadline:
-                return conn.execute(sql, params or None).to_arrow_table()
-        except duckdb.InterruptException as e:
-            raise deadline.interrupted() from e
-        finally:
-            with self._lock:
-                self._running.pop(qid, None)
-            conn.close()
-
-    def cancel(self, query_id: str) -> None:
-        with self._lock:
-            conn = self._running.get(query_id)
-        if conn is not None:
-            conn.interrupt()

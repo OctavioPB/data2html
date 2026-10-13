@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block body %}
+<header class="top">
+  <h1>{{ title }}</h1>
+  <div class="top-right">
+    <span class="muted">{{ signed_in }}</span>
+    <form method="post" action="/logout"><button class="btn" type="submit">{{ sign_out }}</button></form>
+  </div>
+</header>
+<main class="page">
+  {% if reports %}
+  <ul class="list">
+    {% for r in reports %}
+    <li><a class="row-button" href="/r/{{ r.id }}"><strong>{{ r.title }}</strong><span class="muted">{{ r.id }}</span></a></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">{{ empty }}</p>
+  {% endif %}
+</main>
+{% endblock %}

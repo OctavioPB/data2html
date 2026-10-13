@@ -13,11 +13,15 @@ dependencies = [
   "pyyaml>=6",
   "jinja2>=3.1",
   "python-multipart>=0.0.9",
+  "httpx>=0.27",        # OIDC (discovery, JWKS, token endpoint)
+  "joserfc>=1.7,<2",     # id_token validation (BSD-3, ADR 0010)
+  "ruamel.yaml>=0.18",   # saving content keeps hand-written comments (MIT)
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.6", "mypy>=1.11", "types-PyYAML"]
+dev = ["pytest>=8", "httpx2>=2.13", "ruff>=0.6", "mypy>=1.11", "types-PyYAML", "boto3>=1.35"]  # httpx2: starlette TestClient
 teradata = ["teradatasql>=20"]
+dynamodb = ["boto3>=1.35"]  # Apache-2.0; only the ingest CLI/worker needs it
 ai = ["anthropic>=0.40", "boto3>=1.35"]
 
 [build-system]
@@ -27,9 +31,15 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"data2html.render" = ["templates/*.html", "static/*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["postgres: integration with the development Postgres (skipped if there is no server)"]
+markers = [
+  "postgres: integration with the development Postgres (skipped if there is no server)",
+  "mysql: integration with the development MySQL (skipped if there is no server)",
+]
 
 [tool.ruff]
 line-length = 110
@@ -51,5 +61,5 @@ module = ["data2html.spec.*", "data2html.semantic.*", "data2html.sqlgen.*"]
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["pyarrow", "pyarrow.*"]
+module = ["pyarrow", "pyarrow.*", "boto3", "boto3.*", "botocore", "botocore.*", "ruamel", "ruamel.*"]
 ignore_missing_imports = true

@@ -253,3 +253,58 @@ def test_api_suggest(client):
     assert r.status_code == 200 and r.json()["measure_name"] == "bruto"
     r = client.post("/api/semantic/suggest", json={"source": "csv", "sql": "SELECT * FROM ventas"})
     assert r.status_code == 422 and "cannot be promoted" in r.json()["detail"]
+
+
+def test_saving_keeps_hand_written_comments(settings):
+    """ADR 0008 follow-up: the studio updates the YAML in place instead of rewriting it."""
+    from pathlib import Path
+
+    example = Path(__file__).resolve().parents[2] / "examples/semantic/ventas.yaml"
+    store = ModelStore(settings.semantic_dir)
+    settings.semantic_dir.mkdir(parents=True)
+    target = settings.semantic_dir / "ventas.yaml"
+    target.write_text(example.read_text(encoding="utf-8"), encoding="utf-8")
+
+    m = store.get("ventas")
+    data = m.model_dump(mode="json")
+    data["measures"]["venta_neta"]["description"] = "Venta bruta menos descuentos (sin IVA)"
+    del data["measures"]["pedidos"]
+    data["measures"]["ticket"] = {"sql": "AVG(monto_bruto)", "owner": "finanzas", "description": "Ticket"}
+    store.put(SemanticModel.model_validate(data))
+
+    text = target.read_text(encoding="utf-8")
+    assert "# Example semantic model. Measures are defined HERE, once." in text
+    assert "# registered connection id; credentials in .env" in text  # an inline comment survives
+    assert "{ column: canal,       type: nominal }" in text or "{column: canal, type: nominal}" in text
+    assert "Venta bruta menos descuentos (sin IVA)" in text and "ticket:" in text and "pedidos:" not in text
+    assert "format: number" not in text  # defaults are not written
+    assert store.get("ventas") == SemanticModel.model_validate(data)
+
+
+def test_saving_a_broken_file_rewrites_it(settings):
+    store = ModelStore(settings.semantic_dir)
+    settings.semantic_dir.mkdir(parents=True)
+    (settings.semantic_dir / "ventas.yaml").write_text("name: [unclosed\n", encoding="utf-8")
+    store.put(SemanticModel.model_validate(MODEL))
+    assert store.get("ventas") == SemanticModel.model_validate(MODEL)
+
+
+def test_dimension_over_a_computed_column(client):
+    r = client.put("/api/catalog/csv/ventas/computed", json={"name": "zona", "expr": "upper(region)"})
+    assert r.status_code == 200, r.text
+    model = MODEL | {"dimensions": MODEL["dimensions"] | {"zona": {"column": "zona", "type": "nominal"}}}
+    assert client.post("/api/semantic/check", json=model).json() == []
+    assert client.put("/api/semantic/ventas", json=model).status_code == 200
+    r = client.post("/api/visual/query", json={"model": "ventas", "visual": {
+        "mark": "bar", "measure": "venta_neta", "dimension": "zona",
+        "filters": [{"dimension": "zona", "op": "eq", "value": "NORTE"}]}})
+    assert r.status_code == 200, r.text
+    assert r.json()["rows"] == [["NORTE", 140.0]]
+    assert 'UPPER("region")' in r.json()["sql"]  # the expression, not a column "zona"
+
+
+def test_rls_column_cannot_be_computed(client):
+    client.put("/api/catalog/csv/ventas/computed", json={"name": "zona", "expr": "upper(region)"})
+    model = MODEL | {"rls": {"column": "zona", "claim": "groups"}}
+    errors = client.post("/api/semantic/check", json=model).json()
+    assert any("RLS needs a physical column" in e for e in errors)

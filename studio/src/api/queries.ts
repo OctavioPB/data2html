@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRef } from 'react'
 
+import { setCurrency } from '../render/format'
 import { api, type Schemas } from './client'
 
 async function unwrap<T>(req: Promise<{ data?: T; error?: unknown; response: Response }>): Promise<T> {
@@ -237,5 +238,92 @@ export function useVisualQuery(req: Schemas['VisualRequest'] | null) {
 export function useSuggest() {
   return useMutation({
     mutationFn: (body: Schemas['SuggestIn']) => unwrap(api.POST('/api/semantic/suggest', { body })),
+  })
+}
+
+// ------------------------------------------------------------------ reports (Phase 6)
+
+export function useReports() {
+  return useQuery({ queryKey: ['reports'], queryFn: () => unwrap(api.GET('/api/reports')) })
+}
+
+/** Saving publishes: the viewer serves what is saved (ADR 0008). */
+export function useSaveReport() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (report: Schemas['Report']) =>
+      unwrap(api.PUT('/api/reports/{report_id}', { params: { path: { report_id: report.id } }, body: report })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['reports'] }),
+  })
+}
+
+export function useDeleteReport() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => unwrap(api.DELETE('/api/reports/{report_id}', { params: { path: { report_id: id } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['reports'] }),
+  })
+}
+
+// ------------------------------------------------------------------ session (Phase 7)
+
+/** Who is signed in; `null` when nobody (401). The studio requires `author`. */
+export function useMe() {
+  return useQuery({
+    queryKey: ['me'],
+    queryFn: async () => {
+      const { data, error, response } = await api.GET('/api/me')
+      if (response.status === 401) return null
+      if (!response.ok) throw new Error(errorMessage(error, response.status))
+      return data!
+    },
+    retry: false,
+    staleTime: 60_000,
+  })
+}
+
+// ------------------------------------------------------------------ import sources (Phase 8)
+
+/** DynamoDB export status per table; polls while an export runs. */
+export function useIngest(source: string) {
+  return useQuery({
+    queryKey: ['ingest', source],
+    queryFn: () => unwrap(api.GET('/api/ingest/{source}', { params: { path: { source } } })),
+    refetchInterval: (q) => (q.state.data?.tables.some((t) => t.running) ? 3000 : false),
+  })
+}
+
+export function useStartIngest(source: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (table: string) =>
+      unwrap(api.POST('/api/ingest/{source}/{table}', { params: { path: { source, table } } })),
+    onSuccess: (status) => qc.setQueryData(['ingest', source], status),
+  })
+}
+
+// ------------------------------------------------------------------ theme
+
+/** config/theme.yaml; also sets the currency used to format `format: currency` measures. */
+export function useTheme(enabled = true) {
+  return useQuery({
+    queryKey: ['theme'],
+    enabled,
+    queryFn: async () => {
+      const theme = await unwrap(api.GET('/api/theme'))
+      setCurrency(theme.currency)
+      return theme
+    },
+    staleTime: Infinity,
+  })
+}
+
+/** Re-read a remote source's schema (DuckDB caches attached catalogs: new tables appear after this). */
+export function useRefreshSource() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (source: string) =>
+      unwrap(api.POST('/api/catalog/{source}/refresh', { params: { path: { source } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['catalog'] }),
   })
 }

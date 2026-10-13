@@ -1,0 +1,21 @@
+# Sign-in providers (ADR 0010). Copy to config/auth.yaml (ignored by git). No secrets here: only the
+# NAME of the environment variable that holds the client secret.
+local: true                 # username/password from config/users.yaml (python -m data2html.auth add-user)
+session_hours: 8
+# trusted_origins: []       # extra origins allowed to POST, if the studio is served from another host
+
+# Microsoft Entra ID (OIDC). Register an app with redirect URI <D2H_PUBLIC_URL>/auth/callback and define
+# App Roles: one per report-access/RLS group (e.g. "Norte") and "data2html.author" for the studio.
+# App Roles arrive in the `roles` claim; prefer them over `groups` (opaque ids, dropped above 200 groups).
+# oidc:
+#   label: Microsoft
+#   issuer: https://login.microsoftonline.com/<tenant-id>/v2.0
+#   client_id: <application-client-id>
+#   client_secret_env: D2H_OIDC_CLIENT_SECRET
+#   user_id_claim: oid              # stable object id
+#   email_claim: preferred_username
+#   groups_claim: roles             # feeds report `access` and RLS
+#   author_role: data2html.author   # value of groups_claim that grants the studio
+#   db_user:                        # Teradata PROXYUSER (validated; invalid = no Teradata data)
+#     claim: preferred_username
+#     transform: local_part_upper   # aperez@corp.com → APEREZ

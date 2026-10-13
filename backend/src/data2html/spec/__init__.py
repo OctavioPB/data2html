@@ -8,15 +8,20 @@ from data2html.spec.models import (
     Layout,
     Mark,
     Measure,
+    Param,
+    ParamType,
+    ParamValueError,
     Report,
     RlsRule,
     SemanticModel,
     TimeGrain,
     Visual,
+    coerce_param,
     validate_report,
 )
 
 __all__ = [
-    "Dimension", "FieldType", "Filter", "Layout", "Mark", "Measure", "Report",
-    "RlsRule", "SemanticModel", "TimeGrain", "Visual", "allowed_marks", "validate_report",
+    "Dimension", "FieldType", "Filter", "Layout", "Mark", "Measure", "Param", "ParamType",
+    "ParamValueError", "Report", "RlsRule", "SemanticModel", "TimeGrain", "Visual", "allowed_marks",
+    "coerce_param", "validate_report",
 ]

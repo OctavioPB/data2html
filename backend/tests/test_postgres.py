@@ -185,3 +185,33 @@ def test_demo_fase5_venta_neta_por_region(client):
     assert sorted(r[0] for r in results["bar"]["rows"]) == ["Bajío", "Centro", "Norte", "Sur"]
     assert results["bar"]["allowed_marks"] == ["table", "bar", "pie"]
     assert '"pg_dev"."public"."fact_ventas"' in results["bar"]["sql"]
+
+
+def _as_owner(sql: str) -> None:
+    """DDL as the database owner (dev credentials), outside the app's sandbox: test setup only."""
+    import duckdb
+
+    con = duckdb.connect()
+    try:
+        con.execute("LOAD postgres")
+        password = os.environ.get('PG_DEV_PASSWORD', 'd2h')
+        dsn = f"host={HOST} port={PORT} dbname=d2h user=d2h password={password}"
+        con.execute(f"ATTACH '{dsn}' AS owner (TYPE postgres)")
+        con.execute("CALL postgres_execute('owner', ?)", [sql])
+    finally:
+        con.close()
+
+
+def test_refresh_catalog_sees_new_tables(client):
+    """DuckDB caches the attached schema: a table created later only shows up after a refresh."""
+    tables = lambda: next(s for s in client.get("/api/catalog").json()["sources"] if s["id"] == "pg_dev")  # noqa: E731
+    assert "public.tmp_refresh" not in [t["name"] for t in tables()["tables"]]
+    _as_owner("CREATE TABLE IF NOT EXISTS tmp_refresh (x int); GRANT SELECT ON tmp_refresh TO d2h_reader")
+    try:
+        assert "public.tmp_refresh" not in [t["name"] for t in tables()["tables"]]  # still cached
+        assert client.post("/api/catalog/pg_dev/refresh").status_code == 204
+        assert "public.tmp_refresh" in [t["name"] for t in tables()["tables"]]
+    finally:
+        _as_owner("DROP TABLE IF EXISTS tmp_refresh")
+    assert client.post("/api/catalog/csv/refresh").status_code == 204  # no-op for CSV
+    assert client.post("/api/catalog/nope/refresh").status_code == 404

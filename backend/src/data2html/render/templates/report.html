@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block head %}
+<script src="{{ echarts_url }}" integrity="{{ echarts_integrity }}" crossorigin="anonymous" defer></script>
+<script src="/r-static/viewer.js?v={{ version }}" defer></script>
+{% endblock %}
+{% block body %}
+<script type="application/json" id="d2h-view">{{ view }}</script>
+<div id="app" class="app"></div>
+{% endblock %}

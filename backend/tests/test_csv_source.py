@@ -136,3 +136,21 @@ def test_execute_cannot_read_outside_data_dir(src, tmp_path):
 def test_execute_timeout(src):
     with pytest.raises(QueryInterrupted):
         src.execute("SELECT sum(i * i) FROM range(100000000000) t(i)", {}, identity=None, timeout_s=1)
+
+
+def test_abandoned_uploads_are_cleaned(src):
+    import os
+    import time
+
+    from data2html.sources.csv_source import UPLOAD_TTL_S
+
+    old = src.stage(io.BytesIO(VENTAS), "viejo.csv")
+    fresh = src.stage(io.BytesIO(VENTAS), "nuevo.csv")
+    long_ago = time.time() - UPLOAD_TTL_S - 60
+    for suffix in (".csv", ".json"):
+        os.utime(src._s.uploads_dir / f"{old}{suffix}", (long_ago, long_ago))
+    (src._s.uploads_dir / "notes.txt").write_text("not ours")
+    assert src.clean_uploads() == 1
+    names = {p.name for p in src._s.uploads_dir.iterdir()}
+    assert f"{fresh}.csv" in names and f"{old}.csv" not in names and f"{old}.json" not in names
+    assert "notes.txt" in names  # only our own files are touched

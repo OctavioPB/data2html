@@ -1,6 +1,7 @@
 /**
  * Renders a visual from ALREADY aggregated rows (it never re-aggregates). Used by the SQL editor's quick
- * view and by the builder; Phase 6 reuses it in the viewer.
+ * view, the builder and the report editor. The live viewer has the same mapping in plain JS
+ * (backend/src/data2html/render/static/viewer.js): change both together.
  *
  * Mapping (html-renderer skill): bar/line/pie → ECharts; kpi → formatted number; table → DOM <table>
  * (React escapes the text). Style (dataviz skill): one hue per series in the validated palette's fixed
@@ -10,7 +11,7 @@
 import { BarChart, LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components'
 import * as echarts from 'echarts/core'
-import type { EChartsCoreOption } from 'echarts/core'
+import type { EChartsCoreOption, EChartsType } from 'echarts/core'
 import { SVGRenderer } from 'echarts/renderers'
 import { useEffect, useMemo, useRef } from 'react'
 
@@ -18,6 +19,7 @@ import type { Schemas } from '../api/client'
 import { t as translate, useLang, useT, type MessageKey, type Params } from '../i18n'
 import type { Cell, Column } from '../explore/usePagedRows'
 import { usePrefersDark } from '../explore/usePrefersDark'
+import { formatPeriod } from '../i18n/format'
 import { formatter } from './format'
 
 echarts.use([BarChart, LineChart, PieChart, GridComponent, LegendComponent, TooltipComponent, SVGRenderer])
@@ -33,8 +35,12 @@ export interface VisualChartProps {
   dimension: string | null
   color?: string | null
   measures: string[]
+  /** Temporal dimension grouped by period: its values are labelled by the grain ("abr 2025"). */
+  timeGrain?: Schemas['TimeGrain'] | null
   format?: Schemas['MeasureFormat']
   height?: number
+  /** The ECharts instance while one is drawn (null otherwise): for PNG downloads. */
+  onChart?: (chart: EChartsType | null) => void
 }
 
 function cssVar(name: string): string {
@@ -44,14 +50,15 @@ function cssVar(name: string): string {
 export function VisualChart(props: VisualChartProps) {
   const t = useT()
   const { mark, columns, rows, measures } = props
-  if (mark === 'table') return <DataTable columns={columns} rows={rows} format={props.format} measures={measures} />
+  if (mark === 'table') return <DataTable columns={columns} rows={rows} format={props.format} measures={measures} dimension={props.dimension} timeGrain={props.timeGrain} />
   if (mark === 'kpi') return <Kpi {...props} />
   if (rows.length === 0) return <p className="muted">{t('chart.noRows')}</p>
   return <EChart {...props} />
 }
 
-function DataTable({ columns, rows, format, measures }: Pick<VisualChartProps, 'columns' | 'rows' | 'format' | 'measures'>) {
+function DataTable({ columns, rows, format, measures, dimension, timeGrain }: Pick<VisualChartProps, 'columns' | 'rows' | 'format' | 'measures' | 'dimension' | 'timeGrain'>) {
   const fmt = formatter(format)
+  const di = dimension ? columns.findIndex((c) => c.name === dimension) : -1
   return (
     <div className="scroll visual-table">
       <table className="grid">
@@ -71,7 +78,7 @@ function DataTable({ columns, rows, format, measures }: Pick<VisualChartProps, '
                 const isMeasure = measures.includes(columns[j].name)
                 return (
                   <td key={j} className={isMeasure ? 'num' : undefined}>
-                    {v === null ? '∅' : isMeasure && typeof v === 'number' ? fmt(v) : String(v)}
+                    {v === null ? '∅' : isMeasure && typeof v === 'number' ? fmt(v) : j === di && timeGrain && typeof v === 'string' ? formatPeriod(v, timeGrain) : String(v)}
                   </td>
                 )
               })}
@@ -115,7 +122,9 @@ function toSeries(
   const idx = (name: string) => columns.findIndex((c) => c.name === name)
   const di = dimension ? idx(dimension) : -1
   const num = (v: Cell) => (typeof v === 'number' ? v : v === null ? null : Number(v))
-  const label = (v: Cell) => (v === null ? '∅' : String(v))
+  const plain = (v: Cell) => (v === null ? '∅' : String(v))
+  const grain = props.timeGrain
+  const label = (v: Cell) => (grain && typeof v === 'string' ? formatPeriod(v, grain) : plain(v))
   if (color) {
     const ci = idx(color)
     const mi = idx(measures[0])
@@ -140,7 +149,11 @@ function EChart(props: VisualChartProps) {
   const t = useT()
   const lang = useLang()
   const dark = usePrefersDark()
-  const shaped = useMemo(() => toSeries(props), [props])
+  // Keyed by content, not by the props object: parents pass fresh arrays (`measures={[m]}`) on every
+  // render, and `onChart` re-renders the parent, which would re-create the chart in a loop.
+  const dataKey = JSON.stringify([props.columns, props.rows, props.dimension, props.color, props.measures, props.timeGrain])
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
+  const shaped = useMemo(() => toSeries(props), [dataKey])
   const tooManySlices = mark === 'pie' && rows.length > MAX_PIE
 
   const option = useMemo<EChartsCoreOption | null>(() => {
@@ -215,14 +228,19 @@ function EChart(props: VisualChartProps) {
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [shaped, mark, format, dark, lang, tooManySlices])
 
+  const onChart = useRef(props.onChart)
+  onChart.current = props.onChart
+
   useEffect(() => {
     if (!host.current || !option) return
     const chart = echarts.init(host.current, undefined, { renderer: 'svg' })
     chart.setOption(option)
+    onChart.current?.(chart)
     const ro = new ResizeObserver(() => chart.resize())
     ro.observe(host.current)
     return () => {
       ro.disconnect()
+      onChart.current?.(null)
       chart.dispose()
     }
   }, [option])

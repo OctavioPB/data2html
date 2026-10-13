@@ -15,6 +15,7 @@ from data2html.api.deps import RegistryDep, SettingsDep
 from data2html.api.explore import to_cell
 from data2html.api.schemas import Cell, ExploreColumn
 from data2html.i18n import tr
+from data2html.scrub import scrub
 from data2html.settings import Settings
 from data2html.sqlgen.freeform import MAX_PAGE, count_sql, page_sql, prepare_user_sql
 from data2html.sqlstore import SQL_MAX, HistoryEntry, SavedName, SavedQuery, SqlStore
@@ -100,7 +101,8 @@ def run(req: SqlRun, registry: RegistryDep, store: StoreDep, settings: SettingsD
     except Exception as e:
         if first:
             store.record(req.source, req.sql, ok=False, rows=None,
-                         elapsed_ms=int((time.perf_counter() - t0) * 1000), error=str(e).split("\n")[0][:500])
+                         elapsed_ms=int((time.perf_counter() - t0) * 1000),
+                         error=scrub(str(e).split("\n")[0])[:500])
         raise
     elapsed = int((time.perf_counter() - t0) * 1000)
     if first:

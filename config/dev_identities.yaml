@@ -1,0 +1,9 @@
+# Development identities (ADR 0009/0010). Enabled only with D2H_DEV_IDENTITIES=1 and only from localhost;
+# pick one at /login. Fake users, no secrets. The production image refuses to start with them enabled.
+# `groups` feed RLS: the example model filters region_desc IN groups.
+identities:
+  autor:     { email: autor@example.com, author: true, groups: [Norte, Centro, Sur, Bajío] }
+  norte:     { email: norte@example.com, groups: [Norte] }
+  sur:       { email: sur@example.com, groups: [Sur] }
+  direccion: { email: direccion@example.com, groups: [Norte, Centro, Sur, Bajío] }
+  sin_grupo: { email: sin.grupo@example.com }

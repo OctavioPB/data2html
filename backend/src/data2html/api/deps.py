@@ -10,6 +10,9 @@ from fastapi import Depends, FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from data2html.i18n import tr
+from data2html.reports.store import ReportNotFound
+from data2html.scrub import register as register_dir
+from data2html.scrub import scrub
 from data2html.semantic.store import ModelNotFound
 from data2html.semantic.suggest import NotPromotable
 from data2html.settings import Settings
@@ -42,6 +45,9 @@ def _meta(settings: Settings) -> CatalogMeta:
 
 @lru_cache
 def _registry(settings: Settings) -> SourceRegistry:
+    register_dir(settings.data_dir, "<data>")
+    if settings.content_dir is not None:
+        register_dir(settings.content_dir, "<content>")
     return SourceRegistry.load(settings, _meta(settings))
 
 
@@ -84,13 +90,17 @@ _SOURCE_STATUS: list[tuple[type[SourceError], int]] = [
 
 
 def _json(code: int, detail: str) -> JSONResponse:
-    return JSONResponse({"detail": detail}, status_code=code)
+    return JSONResponse({"detail": scrub(detail)}, status_code=code)  # no server paths to the browser
 
 
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ModelNotFound)
     async def _model(_: Request, e: ModelNotFound) -> JSONResponse:
         return _json(status.HTTP_404_NOT_FOUND, tr("unknown semantic model: {name}", name=e))
+
+    @app.exception_handler(ReportNotFound)
+    async def _report(_: Request, e: ReportNotFound) -> JSONResponse:
+        return _json(status.HTTP_404_NOT_FOUND, tr("unknown report: {id}", id=e))
 
     @app.exception_handler(VisualQueryError)
     async def _visual(_: Request, e: VisualQueryError) -> JSONResponse:
