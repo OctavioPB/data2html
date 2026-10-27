@@ -73,7 +73,8 @@ def _login_page(request: Request, settings: Settings, next_url: str, *, error: s
         assert settings.dev_identities_file is not None
         dev = list(load_dev_identities(settings.dev_identities_file).values())
     body = render(
-        "login.html", lang=get_lang(), title=tr("Sign in"), next=next_url, error=error,
+        "login.html", lang=get_lang(), title=tr("Sign in"), subtitle=tr("to your reports"), next=next_url,
+        error=error,
         local=cfg.local, oidc_label=cfg.oidc.label if cfg.oidc else None, dev=dev,
         user_label=tr("User"), password_label=tr("Password"), submit=tr("Sign in"),
         oidc_button=tr("Sign in with {provider}", provider=cfg.oidc.label) if cfg.oidc else "",

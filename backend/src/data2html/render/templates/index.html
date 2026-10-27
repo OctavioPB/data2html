@@ -1,17 +1,23 @@
 {% extends "base.html" %}
+{% block nav_title %}{{ title }}{% endblock %}
 {% block body %}
-<header class="top">
-  <h1>{{ title }}</h1>
-  <div class="top-right">
-    <span class="muted">{{ signed_in }}</span>
-    <form method="post" action="/logout"><button class="btn" type="submit">{{ sign_out }}</button></form>
+<section class="hero">
+  <div class="hero-inner">
+    <div>
+      <p class="eyebrow">data2html</p>
+      <h1>{{ title }}<em>{{ subtitle }}</em></h1>
+    </div>
+    <div class="hero-meta">
+      <span>{{ signed_in }}</span>
+      <form method="post" action="/logout"><button class="btn on-dark" type="submit">{{ sign_out }}</button></form>
+    </div>
   </div>
-</header>
+</section>
 <main class="page">
   {% if reports %}
   <ul class="list">
     {% for r in reports %}
-    <li><a class="row-button" href="/r/{{ r.id }}"><strong>{{ r.title }}</strong><span class="muted">{{ r.id }}</span></a></li>
+    <li><a class="row-button" href="/r/{{ r.id }}"><strong>{{ r.title }}</strong><span class="muted mono">/r/{{ r.id }}</span></a></li>
     {% endfor %}
   </ul>
   {% else %}

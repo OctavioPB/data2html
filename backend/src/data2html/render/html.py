@@ -46,6 +46,7 @@ def csp(echarts_url: str) -> str:
         "default-src 'none'",
         f"script-src 'self' {script_origin}".strip(),
         "style-src 'self'",
+        "font-src 'self'",  # brand fonts, self-hosted (ADR 0013)
         "img-src 'self' data:",
         "connect-src 'self'",
         "base-uri 'none'",

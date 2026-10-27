@@ -111,6 +111,7 @@ Noted when closing Phases 0–3 (2026-10-11); most closed on 2026-10-12. Move in
 - [x] Report editor: renaming a parameter renames it in the visuals' filters (2026-10-12)
 - [x] `mode: snapshot` reports: per-reader snapshots kept until republished or `refresh_hours` (contract field) (2026-10-12)
 - [x] Viewer and studio: temporal axes labelled by `time_grain` ("ene 2025", "T1 2025") (2026-10-12)
+- [x] OPB brand in the viewer and sign-in pages: self-hosted Fraunces/Plus Jakarta Sans (OFL), brand palette validated for colour blindness (ADR 0013) (2026-10-27)
 
 ## Open decisions log
 | Topic | Status | Note |

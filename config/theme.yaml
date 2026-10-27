@@ -1,8 +1,10 @@
-# Viewer theme. Categorical palette in fixed order (series 1, 2, …), never cycled; validated with the
-# dataviz skill (scripts/validate_palette.js): light vs #fcfcfb, dark vs #1b1d21. Light-mode contrast is
-# a WARN for slots 3–5: every visual can switch to its table view and has tooltips (required relief).
-font: "system-ui, 'Segoe UI', Roboto, sans-serif"
+# Viewer theme: OPB brand (ADR 0013). Categorical palette in fixed order (series 1, 2, …), never cycled,
+# derived from the brand and validated with the dataviz skill (scripts/validate_palette.js) against the
+# white card surface: lightness band, chroma floor, colour-blind separation and 3:1 contrast all pass.
+# The brand's semantic colours (green, red, orange) are reserved for states, never series.
+# The viewer is light only; `dark` repeats `light` because the theme format requires both.
+font: "'Plus Jakarta Sans', sans-serif"
 currency: MXN                   # ISO 4217 code for `format: currency` measures
 palette:
-  light: ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"]
-  dark:  ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"]
+  light: ["#2D69AE", "#B8871F", "#7C4DBD", "#E05080", "#3E9BD6"]
+  dark:  ["#2D69AE", "#B8871F", "#7C4DBD", "#E05080", "#3E9BD6"]

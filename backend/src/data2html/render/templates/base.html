@@ -5,10 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ title }}</title>
 <link rel="icon" href="data:,">
+<link rel="preload" href="/r-static/fonts/plus-jakarta-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/r-static/fonts/fraunces-latin-opsz-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/r-static/viewer.css?v={{ version }}">
 {% block head %}{% endblock %}
 </head>
 <body>
+<div class="accent-bar"></div>
+<nav class="nav" aria-label="data2html">
+  <a class="brand" href="/r">
+    {% include "logo.svg" %}
+    <span class="monogram">O<em>PB</em></span>
+  </a>
+  <span class="nav-title">{% block nav_title %}data2html{% endblock %}</span>
+</nav>
 {% block body %}{% endblock %}
+<footer class="footer">
+  <span><span class="monogram">O<em>PB</em></span> · data2html</span>
+  <span class="tagline">From Pipeline to Decision</span>
+</footer>
 </body>
 </html>

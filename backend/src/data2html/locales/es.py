@@ -194,4 +194,9 @@ ES: dict[str, str] = {
     "computed column '{name}' uses another computed column": "la columna calculada '{name}' usa otra columna calculada",
     "refresh_hours only applies to mode: snapshot": "refresh_hours solo aplica a mode: snapshot",
     "Data as of {when}": "Datos al {when}",
+    "to your reports": "a tus reportes",
+    "shared with you": "compartidos contigo",
+    "Report": "Reporte",
+    "Live data": "Datos en vivo",
+    "Snapshot per reader": "Instantánea por lector",
 }

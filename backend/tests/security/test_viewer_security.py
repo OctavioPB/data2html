@@ -234,3 +234,24 @@ def test_snapshot_refresh_hours_is_snapshot_only(report_dict):
     Report.model_validate(report_dict | {"mode": "snapshot", "refresh_hours": 24})
     with _pytest.raises(ValidationError, match="refresh_hours"):
         Report.model_validate(report_dict | {"refresh_hours": 24})
+
+
+# ------------------------------------------------------------------ OPB brand assets (ADR 0013)
+
+
+def test_brand_fonts_are_self_hosted(viewer_app):
+    r = reader("norte").get("/r/regional")
+    csp = r.headers["content-security-policy"]
+    assert "font-src 'self'" in csp and "googleapis" not in csp and "gstatic" not in csp
+    assert "fonts.googleapis.com" not in r.text  # no request leaves for Google Fonts
+    assert 'class="monogram">O<em>PB</em>' in r.text and "From Pipeline to Decision" in r.text
+    for name in ["fraunces-latin-opsz-normal.woff2", "fraunces-latin-opsz-italic.woff2",
+                 "plus-jakarta-sans-latin-wght-normal.woff2", "plus-jakarta-sans-latin-wght-italic.woff2"]:
+        font = TestClient(app).get(f"/r-static/fonts/{name}")
+        assert font.status_code == 200 and font.content[:4] == b"wOF2", name
+    assert "SIL Open Font License" in TestClient(app).get("/r-static/fonts/OFL-Fraunces.txt").text
+
+
+def test_sign_in_page_carries_the_brand(viewer_app):
+    html = TestClient(app).get("/login").text
+    assert '<p class="eyebrow">data2html</p>' in html and "<em>to your reports</em>" in html

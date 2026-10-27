@@ -21,11 +21,12 @@ class Palette(BaseModel):
 class Theme(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     # Only safe characters: the font goes into a CSS custom property of the viewer page
-    font: Annotated[str, Field(pattern=r"^[A-Za-z0-9 ,'\-]{1,200}$")] = "system-ui, sans-serif"
+    font: Annotated[str, Field(pattern=r"^[A-Za-z0-9 ,'\-]{1,200}$")] = "'Plus Jakarta Sans', sans-serif"
     currency: Annotated[str, Field(pattern=r"^[A-Z]{3}$")] = "MXN"
+    # OPB brand palette (ADR 0013), validated against the white card surface; the viewer is light only
     palette: Palette = Palette(
-        light=("#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"),
-        dark=("#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"),
+        light=("#2D69AE", "#B8871F", "#7C4DBD", "#E05080", "#3E9BD6"),
+        dark=("#2D69AE", "#B8871F", "#7C4DBD", "#E05080", "#3E9BD6"),
     )
 
 

@@ -143,6 +143,17 @@ function toSeries(
   return { cats, series: measures.map((m) => ({ name: m, values: rows.map((r) => num(r[idx(m)])) })) }
 }
 
+const PIE_LABEL_MIN_WIDTH = 380
+
+/** Pie slice labels only when the chart is wide enough to show them whole; otherwise the legend and the
+ * tooltip identify the slices. Same rule as the viewer (render/static/viewer.js). */
+function fitPieLabels(chart: echarts.ECharts) {
+  const series = (chart.getOption() as { series?: { type?: string }[] }).series
+  if (series?.[0]?.type !== 'pie') return
+  const show = chart.getWidth() >= PIE_LABEL_MIN_WIDTH
+  chart.setOption({ series: [{ label: { show }, labelLine: { show }, radius: ['0%', show ? '62%' : '72%'] }] })
+}
+
 function EChart(props: VisualChartProps) {
   const { mark, rows, format, height = 360 } = props
   const host = useRef<HTMLDivElement>(null)
@@ -186,9 +197,10 @@ function EChart(props: VisualChartProps) {
           {
             type: 'pie',
             top: 28,
-            radius: ['0%', '70%'],
+            radius: ['0%', '62%'],
             itemStyle: { borderColor: surface, borderWidth: 2 },
-            label: { color: text },
+            label: { color: text, overflow: 'none' },
+            labelLine: { length: 10, length2: 8 },
             data: cats.map((name, i) => ({ name, value: series[0].values[i] })),
           },
         ],
@@ -235,8 +247,12 @@ function EChart(props: VisualChartProps) {
     if (!host.current || !option) return
     const chart = echarts.init(host.current, undefined, { renderer: 'svg' })
     chart.setOption(option)
+    fitPieLabels(chart)
     onChart.current?.(chart)
-    const ro = new ResizeObserver(() => chart.resize())
+    const ro = new ResizeObserver(() => {
+      chart.resize()
+      fitPieLabels(chart)
+    })
     ro.observe(host.current)
     return () => {
       ro.disconnect()

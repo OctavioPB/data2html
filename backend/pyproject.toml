@@ -32,7 +32,7 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"data2html.render" = ["templates/*.html", "static/*"]
+"data2html.render" = ["templates/*.html", "templates/*.svg", "static/*", "static/fonts/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

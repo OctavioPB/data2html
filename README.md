@@ -22,6 +22,8 @@ publish them as **live HTML reports** where every reader only sees the rows they
   - optional per-reader snapshots.
 - **Connect** to CSV uploads, PostgreSQL, MySQL and DynamoDB (via S3 exports). Teradata is planned.
 - **Bilingual:** the interface is in English and Spanish (ES/EN switch).
+- **Branded reports:** readers see the OPB brand system (Fraunces and Plus Jakarta Sans, navy and gold,
+  colour-blind-safe chart palette), with fonts served by the app itself.
 
 It succeeds `pbix2html`, and its reports follow an open, validated YAML contract (`report-spec`).
 
@@ -100,17 +102,34 @@ This starts PostgreSQL (port 5432) and MySQL (port 3306), each seeded with the s
 
 ### 3. Create your `.env`
 
-Create a file named `.env` in the repository root. You can start from `.env.example`. It needs at least:
+The backend reads its settings from a `.env` file in the **repository root** (not in `backend/`). Git ignores
+the file. Create it with these three lines:
 
 ```dotenv
-# Development sign-in: pick a fake identity at /login (localhost only — never in production)
 D2H_DEV_IDENTITIES=1
-# Passwords of the read-only users in the sample databases (see docker-compose.yml)
 PG_DEV_PASSWORD=d2h
 MYSQL_DEV_PASSWORD=d2h
 ```
 
-Every available variable is listed in [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md).
+What the lines do:
+- `D2H_DEV_IDENTITIES=1` turns on development sign-in, where you pick a fake identity at `/login`. It only
+  works from localhost. **Never set it in production.**
+- The two passwords belong to the read-only users of the sample databases (see `docker-compose.yml`).
+
+To create the file from a terminal in the repository root:
+
+```bash
+# macOS / Linux
+printf 'D2H_DEV_IDENTITIES=1\nPG_DEV_PASSWORD=d2h\nMYSQL_DEV_PASSWORD=d2h\n' > .env
+```
+
+```powershell
+# Windows (PowerShell)
+"D2H_DEV_IDENTITIES=1", "PG_DEV_PASSWORD=d2h", "MYSQL_DEV_PASSWORD=d2h" | Set-Content -Encoding utf8 .env
+```
+
+If you skip this step, step 5 fails with `Path '../.env' does not exist`. Every other variable is listed in
+[`docs/CONFIGURATION.md`](docs/CONFIGURATION.md).
 
 ### 4. Register the data sources
 
@@ -126,10 +145,24 @@ skipped Docker, you can leave this file out, and you will still have CSV uploads
 
 ### 5. Install and start the backend
 
+The backend needs **Python 3.12 or newer**. Check with `python --version`: many machines still default to
+3.11, and `pip install` then fails with *requires a different Python*. Create the environment with a 3.12
+interpreter, using whichever of these you have:
+
 ```bash
 cd backend
-python -m venv .venv
+
+# Option A: uv (https://docs.astral.sh/uv/) downloads Python 3.12 if you don't have it
+uv venv --python 3.12 --seed .venv
+
+# Option B: Windows, with Python 3.12 installed from python.org
+py -3.12 -m venv .venv
+
+# Option C: macOS / Linux, with Python 3.12 installed
+python3.12 -m venv .venv
 ```
+
+If you already created `.venv` with an older Python, delete the folder and create it again.
 
 Activate the environment:
 
@@ -140,10 +173,10 @@ source .venv/bin/activate
 .venv\Scripts\Activate.ps1
 ```
 
-Install and run:
+Install and run. `python --version` must now print 3.12 or newer:
 
 ```bash
-pip install -e ".[dev]"
+python -m pip install -e ".[dev]"
 python -m data2html.devtools install-extensions   # one-time: DuckDB's postgres/mysql connectors
 uvicorn data2html.api.main:app --reload --env-file ../.env
 ```
@@ -427,7 +460,7 @@ expose a development setup (`D2H_DEV_IDENTITIES=1`) to a network.
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): components, how a query flows, identity and roles.
 - [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md): every environment variable.
-- [`docs/decisions/`](docs/decisions/): architecture decision records (ADRs 0001–0012).
+- [`docs/decisions/`](docs/decisions/): architecture decision records (ADRs 0001–0013).
 - [`studio/README.md`](studio/README.md): frontend details (generated types, i18n, pinned versions).
 - [`CLAUDE.md`](CLAUDE.md): working rules for contributors and for Claude Code (`/phase`, `/new-source`,
   `/new-visual`, `/review-security`).

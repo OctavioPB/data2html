@@ -6,8 +6,8 @@
   const view = JSON.parse(document.getElementById('d2h-view').textContent)
   const LANGS = ['en', 'es']
   const LOCALES = { en: 'en-US', es: 'es-MX' }
-  const MAX_SERIES = 8
   const MAX_PIE = 8
+  const PIE_LABEL_MIN_WIDTH = 380
   const LANG_KEY = 'd2h.lang'
 
   // ------------------------------------------------------------------ language
@@ -29,7 +29,6 @@
   let cross = [] // [{ dimension, value, from }]
   const marks = Object.fromEntries(view.visuals.map((v) => [v.id, v.mark]))
   const cards = new Map() // visual id → { body, chart, data, ctrl }
-  const dark = window.matchMedia('(prefers-color-scheme: dark)')
 
   // ------------------------------------------------------------------ helpers
   function el(tag, attrs = {}, ...children) {
@@ -46,13 +45,16 @@
   }
   const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 
+  // The brand is light only (ADR 0013): the light palette, validated against the white card surface.
+  const palette = () => view.theme.palette.light
+  // Series beyond the palette would repeat a colour (two series looking alike): fall back to the table.
+  const MAX_SERIES = Math.min(8, palette().length)
+
   function applyTheme() {
     const root = document.documentElement.style
-    const palette = dark.matches ? view.theme.palette.dark : view.theme.palette.light
-    palette.forEach((c, i) => root.setProperty(`--series-${i + 1}`, c))
-    root.setProperty('--font', view.theme.font)
+    palette().forEach((c, i) => root.setProperty(`--series-${i + 1}`, c))
+    root.setProperty('--fb', view.theme.font)
   }
-  const palette = () => (dark.matches ? view.theme.palette.dark : view.theme.palette.light)
 
   function formatter(format, compact = false) {
     const base = compact ? { notation: 'compact', maximumFractionDigits: 1 } : {}
@@ -86,10 +88,11 @@
     for (const c of cards.values()) c.chart?.dispose()
     cards.clear()
     const app = document.getElementById('app')
-    app.replaceChildren(header(), controls(), chips(), grid())
+    app.replaceChildren(header(), el('div', { class: 'toolbar' }, controls(), chips()), grid())
     view.visuals.forEach((v) => load(v))
   }
 
+  /** Dark hero (OPB): gold eyebrow, Fraunces title with an italic second line, session and language. */
   function header() {
     const langSwitch = el('div', { class: 'seg', role: 'group', 'aria-label': t('language') },
       ...LANGS.map((l) => el('button', {
@@ -102,11 +105,14 @@
         },
       })))
     const logout = el('form', { method: 'post', action: '/logout' },
-      el('button', { class: 'btn', type: 'submit', text: t('signOut') }))
-    return el('header', { class: 'top' },
-      el('h1', { text: view.title }),
-      el('div', { class: 'top-right' },
-        el('span', { class: 'muted small', text: t('signedInAs', { user: view.user }) }), langSwitch, logout))
+      el('button', { class: 'btn on-dark', type: 'submit', text: t('signOut') }))
+    return el('header', { class: 'hero' },
+      el('div', { class: 'hero-inner' },
+        el('div', {},
+          el('p', { class: 'eyebrow', text: t('eyebrow') }),
+          el('h1', {}, view.title, el('em', { text: t(view.mode === 'snapshot' ? 'snapshot' : 'live') }))),
+        el('div', { class: 'hero-meta' },
+          el('span', { text: t('signedInAs', { user: view.user }) }), langSwitch, logout)))
   }
 
   function controls() {
@@ -279,6 +285,7 @@
     c.body.replaceChildren(host)
     const chart = window.echarts.init(host)
     chart.setOption(option(v, mark, shaped))
+    fitPieLabels(chart)
     if (v.crossFilter && mark !== 'line') {
       chart.on('click', (e) => {
         const value = shaped.raw[e.dataIndex]
@@ -289,6 +296,14 @@
       })
     }
     c.chart = chart
+  }
+
+  /** Pie slice labels only when the card is wide enough to show them whole; otherwise the legend and the
+   * tooltip identify the slices (labels inside would put white text on the gold slice). */
+  function fitPieLabels(chart) {
+    if (chart.getOption().series?.[0]?.type !== 'pie') return
+    const show = chart.getWidth() >= PIE_LABEL_MIN_WIDTH
+    chart.setOption({ series: [{ label: { show }, labelLine: { show }, radius: ['0%', show ? '62%' : '72%'] }] })
   }
 
   function table(v, data) {
@@ -376,9 +391,9 @@
       return {
         ...base,
         series: [{
-          type: 'pie', top: 28, radius: ['0%', '70%'],
+          type: 'pie', top: 28, radius: ['0%', '62%'],
           itemStyle: { borderColor: surface, borderWidth: 2 },
-          label: { color: text },
+          label: { color: text, overflow: 'none' }, labelLine: { length: 10, length2: 8 },
           data: cats.map((name, i) => ({ name, value: series[0].values[i], itemStyle: dim(name) })),
         }],
       }
@@ -404,10 +419,13 @@
   }
 
   // ------------------------------------------------------------------ start
-  window.addEventListener('resize', () => { for (const c of cards.values()) c.chart?.resize() })
-  dark.addEventListener('change', () => {
-    applyTheme()
-    for (const v of view.visuals) { const c = cards.get(v.id); if (c?.data) draw(v, c.data) }
+  window.addEventListener('resize', () => {
+    for (const c of cards.values()) {
+      if (!c.chart) continue
+      c.chart.resize()
+      fitPieLabels(c.chart)
+    }
   })
-  render()
+  // charts are drawn on a canvas: wait for the brand fonts, or their labels keep the fallback font
+  ;(document.fonts?.ready ?? Promise.resolve()).then(render)
 })()

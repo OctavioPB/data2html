@@ -85,7 +85,8 @@ def report_index(
     items, _ = reports.list()
     readable = [r for r in items if can_read(r, identity)]
     body = render("index.html", lang=get_lang(), reports=readable, user=identity.user_id,
-                  title=tr("Reports"), empty=tr("No reports available for you."),
+                  title=tr("Reports"), subtitle=tr("shared with you"),
+                  empty=tr("No reports available for you."),
                   signed_in=tr("Signed in as {user}", user=identity.user_id), sign_out=tr("Sign out"))
     return _html(body, settings)
 
@@ -113,6 +114,7 @@ def _view(report: Report, model: SemanticModel, identity: Identity, settings: Se
     return {
         "id": report.id,
         "title": report.title,
+        "mode": report.mode.value,
         "params": {name: report.param(name).model_dump(mode="json") for name in report.params},
         "visuals": visuals,
         "user": identity.user_id,

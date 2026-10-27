@@ -1,8 +1,12 @@
 {% extends "base.html" %}
+{% block nav_title %}{{ title }}{% endblock %}
 {% block body %}
 <main class="page narrow">
+  <p class="eyebrow">data2html</p>
   <h1>{{ title }}</h1>
-  <p class="muted">{{ text }}</p>
-  {% if login_url %}<p><a class="btn" href="{{ login_url }}">{{ login_label }}</a></p>{% endif %}
+  <div class="panel">
+    <p class="muted">{{ text }}</p>
+    {% if login_url %}<a class="btn primary" href="{{ login_url }}">{{ login_label }}</a>{% endif %}
+  </div>
 </main>
 {% endblock %}

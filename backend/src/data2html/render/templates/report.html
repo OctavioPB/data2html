@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block nav_title %}{{ title }}{% endblock %}
 {% block head %}
 <script src="{{ echarts_url }}" integrity="{{ echarts_integrity }}" crossorigin="anonymous" defer></script>
 <script src="/r-static/viewer.js?v={{ version }}" defer></script>

@@ -22,6 +22,14 @@ description: Use when working on HTML report rendering (backend/src/data2html/re
 - Each card offers CSV (`/api/r/<id>/visuals/<v>.csv`, same query string as the JSON) and PNG
   (`chart.getDataURL`, charts only; tables and KPIs download as CSV).
 
+## Brand (ADR 0013)
+The viewer and the sign-in pages follow the OPB brand system: tokens on `:root` in `viewer.css`
+(navy `--primary`, gold `--gold`, `--p10` borders, `--light` page), Fraunces 300 for titles and KPI numbers with a
+gold italic line, Plus Jakarta Sans for body/UI, gold eyebrows, a sticky navy nav with the OPB logo
+(`templates/logo.svg`), a dark hero with the grid texture, and a footer with a gold rule. Fonts are self-hosted
+in `static/fonts/` (OFL, with their licenses) — never load them from Google. Light only. No emojis, no shadows,
+no bold Fraunces, no white text on gold. The studio keeps its own neutral style.
+
 ## Theme
 Colors, font and currency from `config/theme.yaml` (`render/theme.py`): one palette for light and one for
 dark, both validated with the dataviz skill. Respect `prefers-color-scheme`.
