@@ -32,6 +32,19 @@ carry them. Copy what you need into your `.env` (see `.env.example`).
 | `D2H_DEV_IDENTITIES` | — | `1` enables development identities at `/login` (localhost only). **Never in production.** |
 | `D2H_DEV_IDENTITIES_FILE` | `config/dev_identities.yaml` | Those identities. |
 
+## AI and the MCP server (ADR 0014)
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `D2H_AI_FILE` | `config/ai.yaml` | Exposure per source for the AI: `none`, `metadata` (default) or `results`, plus `max_rows`. See `config/ai.example.yaml`. Absent = `metadata` everywhere. |
+
+The MCP process (`python -m data2html.mcp`, started by Claude Desktop) reads its own environment:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `D2H_TOKEN` | — | **Secret.** Personal access token, created at `/tokens` (or `python -m data2html.auth token create <local user>`). Expires in ≤ 90 days; revocable. |
+| `D2H_URL` | `http://127.0.0.1:8000` | The data2html backend the MCP server calls. |
+
 ## Sources
 
 The variable names below are examples: each source names its own in `config/sources.yaml`.

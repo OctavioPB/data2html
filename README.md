@@ -37,10 +37,11 @@ It succeeds `pbix2html`, and its reports follow an open, validated YAML contract
 4. [Using the app](#using-the-app)
 5. [Configuration](#configuration)
 6. [DynamoDB imports](#dynamodb-imports)
-7. [Tests and checks](#tests-and-checks)
-8. [Project layout](#project-layout)
-9. [Status and roadmap](#status-and-roadmap)
-10. [Further reading](#further-reading)
+7. [Claude Desktop (MCP)](#claude-desktop-mcp)
+8. [Tests and checks](#tests-and-checks)
+9. [Project layout](#project-layout)
+10. [Status and roadmap](#status-and-roadmap)
+11. [Further reading](#further-reading)
 
 ---
 
@@ -375,6 +376,40 @@ python -m data2html.ingest dynamodb <source-id>      # all tables of that source
   [ADR 0012](docs/decisions/0012-dynamodb-import-via-s3-export.md).
 
 ---
+
+## Claude Desktop (MCP)
+
+Claude can query your semantic models and reports through a local MCP server, **with the permissions of
+whoever owns the token** (row-level security included, also for the author). It is read-only and never
+sees SQL, table names or RLS rules (ADR 0014).
+
+1. Install the extra in the backend's virtual environment: `pip install -e ".[mcp]"`.
+2. Decide what the AI may see: copy `config/ai.example.yaml` to `config/ai.yaml`. Every source is
+   `metadata` (names and descriptions only) unless you set it to `results`; `none` hides it.
+3. Sign in to the viewer, open **Access tokens** (`/tokens`) and create a token. It is shown once,
+   together with a ready-to-paste configuration.
+4. Add it to Claude Desktop (*Settings → Developer → Edit config*, `claude_desktop_config.json`),
+   using the **absolute path** to the backend's Python:
+
+   ```json
+   {
+     "mcpServers": {
+       "data2html": {
+         "command": "C:/path/to/data2html/backend/.venv/Scripts/python.exe",
+         "args": ["-m", "data2html.mcp"],
+         "env": { "D2H_URL": "http://localhost:8000", "D2H_TOKEN": "d2h_…" }
+       }
+     }
+   }
+   ```
+
+5. Restart Claude Desktop and ask, for example, *"What was net sales by region last quarter?"*.
+
+Tools: `list_models`, `query_measure`, `list_reports`, `get_report_visual`, `whoami`, and for the author
+`list_tables` and `profile_table`. The backend must be running. Revoke a token at `/tokens` (or
+`python -m data2html.auth token revoke <id>`); local users can also get one from the CLI:
+`python -m data2html.auth token create <user>`. For Claude Code:
+`claude mcp add data2html --env D2H_URL=… --env D2H_TOKEN=… -- <python> -m data2html.mcp`.
 
 ## Tests and checks
 

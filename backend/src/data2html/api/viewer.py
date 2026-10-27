@@ -87,7 +87,8 @@ def report_index(
     body = render("index.html", lang=get_lang(), reports=readable, user=identity.user_id,
                   title=tr("Reports"), subtitle=tr("shared with you"),
                   empty=tr("No reports available for you."),
-                  signed_in=tr("Signed in as {user}", user=identity.user_id), sign_out=tr("Sign out"))
+                  signed_in=tr("Signed in as {user}", user=identity.user_id), sign_out=tr("Sign out"),
+                  tokens_label=tr("Access tokens"))
     return _html(body, settings)
 
 

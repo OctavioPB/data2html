@@ -17,7 +17,8 @@ backend/src/data2html/
   reports/    versioned report-specs in content/reports/ (saving = publishing)
   render/     viewer HTML (Jinja2 + static viewer.js + ECharts), theme, per-identity cache
   auth/       current_identity: local (scrypt), oidc (Entra ID), dev (localhost) → Identity; sessions
-  ai/         optional: LLMProvider, tools, exposure policies
+  ai/         AI settings: exposure per source (config/ai.yaml); later LLMProvider
+  mcp/        local MCP server (stdio) for Claude Desktop → /api/agent with a personal token
   i18n.py, locales/  server messages in English / Spanish (per request)
   importers/pbix/    extractor inherited from pbix2html
 ```
@@ -60,6 +61,8 @@ For large tables, `sqlgen` emits the whole query in the source's dialect
   Everyone signs in at `/login`.
 - Sessions live server-side (SQLite); the cookie carries a signed random id. Sign-out revokes the session.
 - Every studio route requires `author`; every state-changing request must come from our own origin.
+- Personal access tokens (ADR 0014) open only the read-only agent API `/api/agent/*` (Bearer), which
+  the MCP server calls; results carry the token owner's RLS and the per-source exposure of `config/ai.yaml`.
 - `db_user` is the Teradata PROXYUSER, validated by `auth`; without it an identity gets no Teradata data.
 - For Teradata, only `oidc` identities map to `PROXYUSER`; a local identity gets no Teradata data in
   the viewer unless the author configures an explicit mapping.

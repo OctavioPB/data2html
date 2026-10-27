@@ -243,6 +243,22 @@ h2.section {
   margin: 36px 0 12px; font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold);
 }
 
+/* ---------------------------------------------------------------- access tokens */
+.page.narrow > .notice, .page.narrow > .panel { margin-top: var(--space-md); }
+.token-new p { margin: 0 0 12px; }
+.secret, .snippet {
+  display: block; font-family: var(--fm); font-size: 12px; background: var(--light); border: 1px solid var(--p10);
+  border-radius: var(--r-sm); padding: 10px 12px; overflow-wrap: anywhere; user-select: all;
+}
+.snippet { white-space: pre-wrap; margin: 0; }
+.token-row {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); padding: 14px 18px;
+  border: 1px solid var(--p10); border-radius: var(--r-md); background: var(--white);
+}
+.token-row div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.token-row strong { font-family: var(--fd); font-weight: 400; font-size: 18px; overflow-wrap: anywhere; }
+.token-row .muted { font-size: 12px; }
+
 /* ---------------------------------------------------------------- footer */
 .footer {
   border-top: 2px solid var(--gold); margin-top: var(--space-lg); padding: 20px var(--space-lg);

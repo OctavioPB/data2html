@@ -19,10 +19,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "httpx2>=2.13", "ruff>=0.6", "mypy>=1.11", "types-PyYAML", "boto3>=1.35"]  # httpx2: starlette TestClient
+dev = ["pytest>=8", "httpx2>=2.13", "ruff>=0.6", "mypy>=1.11", "types-PyYAML", "boto3>=1.35",
+       "mcp>=2.3,<3"]  # httpx2: starlette TestClient
 teradata = ["teradatasql>=20"]
 dynamodb = ["boto3>=1.35"]  # Apache-2.0; only the ingest CLI/worker needs it
 ai = ["anthropic>=0.40", "boto3>=1.35"]
+mcp = ["mcp>=2.3,<3"]  # MIT; only `python -m data2html.mcp` (Claude Desktop) imports it
 
 [build-system]
 requires = ["setuptools>=69"]

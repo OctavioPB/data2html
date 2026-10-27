@@ -6,7 +6,9 @@ carries its signed random id. On every request:
   development identities also require `D2H_DEV_IDENTITIES=1` and a localhost client);
 - `oidc` identities are the snapshot taken from the validated `id_token` at sign-in.
 
-Nothing in headers, query parameters or bodies can set or change the identity.
+Nothing in headers, query parameters or bodies can set or change the identity. The one exception is
+the read-only agent API (`/api/agent/*`, ADR 0014): it takes a personal access token as
+`Authorization: Bearer` (and nothing else), which stands for the identity it was created for.
 """
 
 from __future__ import annotations
@@ -21,6 +23,7 @@ from data2html.auth.dev import load_dev_identities
 from data2html.auth.local import load_users, to_identity
 from data2html.auth.session import COOKIE, verify
 from data2html.auth.sessions import get_store
+from data2html.auth.tokens import get_tokens
 from data2html.i18n import tr
 from data2html.settings import Settings
 from data2html.sources.base import Identity
@@ -38,12 +41,25 @@ def session_id(request: Request) -> str | None:
 
 
 def resolve_identity(request: Request, settings: Settings) -> Identity | None:
+    """The session cookie's identity. `Authorization` is ignored here: tokens only open /api/agent."""
     sid = session_id(request)
     if sid is None:
         return None
     stored = get_store(settings.sessions_path).get(sid)
-    if stored is None:
+    return _live(stored, request, settings) if stored is not None else None
+
+
+def resolve_token_identity(request: Request, settings: Settings) -> Identity | None:
+    """`Authorization: Bearer d2h_…` (personal access token, ADR 0014). Only the agent API calls this."""
+    scheme, _, secret = request.headers.get("authorization", "").partition(" ")
+    if scheme.lower() != "bearer" or not secret:
         return None
+    stored = get_tokens(settings.sessions_path).get(secret.strip())
+    return _live(stored, request, settings) if stored is not None else None
+
+
+def _live(stored: Identity, request: Request, settings: Settings) -> Identity | None:
+    """The identity a session or token stands for, re-checked against its provider right now."""
     if stored.provider == "dev":
         if not dev_login_allowed(request, settings):
             return None
@@ -66,6 +82,14 @@ def current_identity(request: Request, settings: SettingsDep) -> Identity | None
 def require_identity(identity: Annotated[Identity | None, Depends(current_identity)]) -> Identity:
     if identity is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=tr("sign in to see this report"))
+    return identity
+
+
+def require_token(request: Request, settings: SettingsDep) -> Identity:
+    identity = resolve_token_identity(request, settings)
+    if identity is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=tr("a valid access token is required"),
+                            headers={"WWW-Authenticate": "Bearer"})
     return identity
 
 
@@ -98,3 +122,4 @@ def check_origin(request: Request, settings: SettingsDep) -> None:
 IdentityDep = Annotated[Identity, Depends(require_identity)]
 MaybeIdentityDep = Annotated[Identity | None, Depends(current_identity)]
 AuthorDep = Annotated[Identity, Depends(require_author)]
+TokenIdentityDep = Annotated[Identity, Depends(require_token)]

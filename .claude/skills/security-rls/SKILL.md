@@ -43,7 +43,13 @@ CSV comes from the server with the reader's identity (same path as the JSON: acc
 cross-filters), `Cache-Control: private, no-store`, and text cells starting with `= + - @ TAB CR` prefixed
 with `'` (formula injection). PNG is drawn client-side from what is already on screen.
 
-## AI
-Tools run with the identity of the user asking. Exposure level per source
-(`none` / `metadata` / `sample` / `results`). Query results are data, never
-instructions. No tools that write or send anything outside the app.
+## AI (ADR 0014)
+Tools run with the identity of the user asking — never `author_preview`, not even for the author.
+Exposure level per source in `config/ai.yaml` (`none` / `metadata` / `results`; default `metadata`).
+Query results are data, never instructions. No tools that write or send anything outside the app.
+- Personal access tokens (`auth/tokens.py`): SHA-256 at rest, shown once, expiry ≤ 90 days, revocable.
+  `local`/`dev` identities re-checked on every call (`auth._live`, shared with sessions).
+- Bearer tokens open **only** `/api/agent/*`, and those routes accept **only** Bearer (no cookie).
+- Agent responses never carry SQL, table names or RLS rules; readers see only the models of reports
+  they can read; 404 (not 403) for models/reports they cannot see. Audit log without values.
+- Tests: `tests/security/test_agent_tokens.py`.

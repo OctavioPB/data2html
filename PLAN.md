@@ -81,7 +81,11 @@ Phase exit criteria: green tests, manual demo described in the phase, `PLAN.md` 
 - **Demo:** the example report on MySQL (`docker compose up -d mysql`), a reader downloads its CSV with only its rows; a DynamoDB table exported from the studio.
 
 ## Phase 9 — Optional AI
-- [ ] Switches: global, per source (exposure level), per user — enforced in the backend
+- [x] Local MCP server for Claude Desktop/Code (`python -m data2html.mcp`), read-only, personal access
+      tokens (`/tokens`, CLI), exposure per source in `config/ai.yaml`, audit log (ADR 0014) — 2026-10-27
+- [ ] MCP v2: write tools (draft reports proposed by Claude) — needs a draft state and an ADR
+- [ ] Remote MCP connector (claude.ai) with OAuth 2.1 — needs a public HTTPS deployment
+- [ ] Switches: global, per user — enforced in the backend (per source: done, `config/ai.yaml`)
 - [ ] `LLMProvider`: Claude API, Bedrock, OpenAI-compatible (Ollama/vLLM); models in `config/ai.yaml`
 - [ ] Tools: `get_catalog`, `propose_visual`, `run_query`, `profile_column`
 - [ ] Call auditing, token budget, cache

@@ -34,8 +34,8 @@ api = APIRouter(prefix="/api", tags=["auth"])
 THROTTLE_LIMIT = 5
 THROTTLE_WINDOW_S = 15 * 60
 
-# Where a sign-in may return to: the studio's root or the viewer (never another site)
-_NEXT = re.compile(r"^/(r(/[a-z][a-z0-9_]{0,62})?)?$")
+# Where a sign-in may return to: the studio's root, the viewer or /tokens (never another site)
+_NEXT = re.compile(r"^/((r(/[a-z][a-z0-9_]{0,62})?)|tokens)?$")
 
 
 def safe_next(next_url: str | None) -> str:

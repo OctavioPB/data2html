@@ -16,6 +16,7 @@ import hashlib
 import hmac
 import secrets
 import sys
+import time
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
@@ -132,8 +133,48 @@ def main(argv: list[str] | None = None) -> int:
     add.add_argument("--db-user", help="Teradata PROXYUSER")
     add.add_argument("--password-stdin", action="store_true")
     add.add_argument("--file", default=str(default_file))
+    tok = sub.add_parser("token", help="personal access tokens of local users (ADR 0014)")
+    tsub = tok.add_subparsers(dest="action", required=True)
+    create = tsub.add_parser("create", help="new token for a local user; printed once")
+    create.add_argument("user_id")
+    create.add_argument("--name", default="")
+    create.add_argument("--days", type=int, default=30)
+    create.add_argument("--file", default=str(default_file))
+    lst = tsub.add_parser("list", help="active tokens of a local user")
+    lst.add_argument("user_id")
+    rev = tsub.add_parser("revoke", help="revoke a token by id (any user)")
+    rev.add_argument("token_id")
     args = parser.parse_args(argv)
+    if args.cmd == "token":
+        return _token(args)
     return _add_user(args)
+
+
+def _token(args: argparse.Namespace) -> int:
+    from data2html.auth.tokens import get_tokens
+    from data2html.settings import Settings
+
+    store = get_tokens(Settings.from_env().sessions_path)
+    if args.action == "revoke":
+        found = store.revoke(args.token_id)
+        print(f"token {args.token_id} revoked" if found else f"unknown token {args.token_id}",
+              file=sys.stdout if found else sys.stderr)
+        return 0 if found else 1
+    if args.action == "list":
+        for t in store.list("local", args.user_id):
+            print(f"{t.id}  {t.name}  expires {time.strftime('%Y-%m-%d', time.gmtime(t.expires))}")
+        return 0
+    user = load_users(Path(args.file)).get(args.user_id)
+    if user is None:
+        print(f"unknown local user {args.user_id}", file=sys.stderr)
+        return 1
+    try:
+        token_id, secret = store.create(to_identity(args.user_id, user), args.name, args.days)
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        return 1
+    print(f"token {token_id} for {args.user_id} (copy it now, it is not stored):\n{secret}")
+    return 0
 
 
 if __name__ == "__main__":

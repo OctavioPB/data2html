@@ -32,6 +32,7 @@ class Settings:
     echarts_url: str = ECHARTS_URL
     auth_file: Path | None = None  # config/auth.yaml (providers); None = local login only
     users_file: Path | None = None  # config/users.yaml (local users, hashed passwords)
+    ai_file: Path | None = None  # config/ai.yaml (what the AI may see per source); None = metadata only
     # Public origin when behind a proxy (OIDC redirect URI, CSRF origin check), e.g. https://bi.example.com
     public_url: str | None = None
 
@@ -85,5 +86,6 @@ class Settings:
             echarts_url=env.get("D2H_ECHARTS_URL", ECHARTS_URL),
             auth_file=Path(env.get("D2H_AUTH_FILE", _REPO_ROOT / "config/auth.yaml")),
             users_file=Path(env.get("D2H_USERS_FILE", _REPO_ROOT / "config/users.yaml")),
+            ai_file=Path(env.get("D2H_AI_FILE", _REPO_ROOT / "config/ai.yaml")),
             public_url=env.get("D2H_PUBLIC_URL") or None,
         )

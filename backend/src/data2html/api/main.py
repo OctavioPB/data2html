@@ -6,7 +6,20 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from data2html import __version__
-from data2html.api import catalog, csv, explore, ingest, login, profile, reports, semantic, sql, viewer
+from data2html.api import (
+    agent,
+    catalog,
+    csv,
+    explore,
+    ingest,
+    login,
+    profile,
+    reports,
+    semantic,
+    sql,
+    tokens,
+    viewer,
+)
 from data2html.api.deps import SettingsDep, get_settings, install_error_handlers
 from data2html.api.schemas import Compat, Health
 from data2html.auth import check_origin, require_author
@@ -38,6 +51,9 @@ app.include_router(login.api)
 app.include_router(viewer.pages)
 app.include_router(viewer.api)
 app.mount("/r-static", viewer.static, name="viewer-static")
+# Personal access tokens (session) and the read-only agent API they open (Bearer only; ADR 0014)
+app.include_router(tokens.pages)
+app.include_router(agent.router)
 
 
 @app.get("/health")

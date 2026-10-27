@@ -1,11 +1,23 @@
-# Phase 9. Copy to ai.yaml. Model ids change: they go here, never in code.
-enabled: false
-default: claude
-providers:
-  claude:  { kind: anthropic, model: "<model-id>", api_key_env: ANTHROPIC_API_KEY }
-  bedrock: { kind: bedrock, region_env: AWS_REGION, model: "<bedrock-id>" }
-  local:   { kind: openai_compatible, base_url: "http://ollama:11434/v1", model: "<model>" }
-exposure:                # per source: none | metadata | sample | results
-  postgres_dev: results
-  teradata_prod: metadata
-budget: { tokens_per_user_per_day: 200000 }
+# AI settings. Copy to config/ai.yaml (or point D2H_AI_FILE at it). No file = `metadata` everywhere.
+#
+# Exposure: what the AI (today, the MCP server for Claude Desktop; ADR 0014) may see of each source.
+#   none      the source, its models and reports do not exist for the AI
+#   metadata  names, types and descriptions only: no rows, no values      (default)
+#   results   also aggregated results (queries, report visuals) and EDA profiles
+# Results sent to Claude leave the organisation: opt a source in deliberately.
+default_exposure: metadata
+exposure:
+  csv: results
+  # postgres_dev: results
+  # teradata_prod: metadata
+max_rows: 500  # rows per agent query (1–1000)
+
+# Phase 9, in-app assistant (not implemented yet; these keys are rejected until it is).
+# Model ids change: they go here, never in code.
+# enabled: false
+# default: claude
+# providers:
+#   claude:  { kind: anthropic, model: "<model-id>", api_key_env: ANTHROPIC_API_KEY }
+#   bedrock: { kind: bedrock, region_env: AWS_REGION, model: "<bedrock-id>" }
+#   local:   { kind: openai_compatible, base_url: "http://ollama:11434/v1", model: "<model>" }
+# budget: { tokens_per_user_per_day: 200000 }

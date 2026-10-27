@@ -9,6 +9,7 @@
     </div>
     <div class="hero-meta">
       <span>{{ signed_in }}</span>
+      <a class="btn on-dark" href="/tokens">{{ tokens_label }}</a>
       <form method="post" action="/logout"><button class="btn on-dark" type="submit">{{ sign_out }}</button></form>
     </div>
   </div>

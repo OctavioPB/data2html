@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block nav_title %}{{ title }}{% endblock %}
+{% block body %}
+<main class="page narrow">
+  <p class="eyebrow">data2html</p>
+  <h1>{{ title }}<br><em>{{ subtitle }}</em></h1>
+  <p class="muted">{{ user }} · <a href="/r">{{ back }}</a></p>
+  <p class="notice">{{ intro }}</p>
+  {% if error %}<p class="error-box" role="alert">{{ error }}</p>{% endif %}
+  {% if secret %}
+  <div class="panel token-new" role="status">
+    <p><strong>{{ once }}</strong></p>
+    <code class="secret">{{ secret }}</code>
+    <h2 class="section">{{ config_label }}</h2>
+    <pre class="snippet">{
+  "mcpServers": {
+    "data2html": {
+      "command": "python",
+      "args": ["-m", "data2html.mcp"],
+      "env": {
+        "D2H_URL": "{{ base_url }}",
+        "D2H_TOKEN": "{{ secret }}"
+      }
+    }
+  }
+}</pre>
+  </div>
+  {% endif %}
+  <div class="panel">
+    <form class="stack" method="post" action="/tokens">
+      <label>{{ name_label }}<input name="name" maxlength="{{ name_max }}" value="Claude Desktop"></label>
+      <label>{{ days_label }}<input name="days" type="number" min="1" max="{{ max_days }}" value="{{ default_days }}" required></label>
+      <button class="btn primary wide" type="submit">{{ create }}</button>
+    </form>
+  </div>
+  <h2 class="section">{{ active }}</h2>
+  {% if tokens %}
+  <ul class="list">
+    {% for t in tokens %}
+    <li class="token-row">
+      <div><strong>{{ t.name }}</strong><span class="muted">{{ t.meta }} · {{ t.used }}</span></div>
+      <form method="post" action="/tokens/{{ t.id }}/revoke"><button class="btn" type="submit">{{ revoke }}</button></form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">{{ none }}</p>
+  {% endif %}
+</main>
+{% endblock %}
